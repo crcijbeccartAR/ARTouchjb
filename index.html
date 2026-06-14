@@ -906,7 +906,7 @@ function closeM(id){document.getElementById(id).classList.remove('open')}
 document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
 function F(n){if(!n&&n!==0)return'0';return n.toLocaleString('fr-FR');}
 function D(d){if(!d)return'--';const p=d.split('-');return p[2]+'/'+p[1];}
-function esc(s){return encodeURIComponent(s);}
+function esc(s){return encodeURIComponent(s).replace(/'/g,'%27');}
 function unesc(s){return decodeURIComponent(s);}
 function T(m,e){const t=document.getElementById('toast');t.textContent=m;t.className='show'+(e?' err':'');clearTimeout(t._t);t._t=setTimeout(()=>t.className='',3000);}
 
