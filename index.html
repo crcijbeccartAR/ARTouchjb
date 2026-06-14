@@ -405,11 +405,11 @@ function renderSB(){
   document.getElementById('res-list').innerHTML=html;
 }
 if(!window._openSubs)window._openSubs={};
-function toggleSub(sc){window._openSubs[sc]=!window._openSubs[sc];renderSB();}
+function toggleSub(sc){sc=unesc(sc);window._openSubs[sc]=!window._openSubs[sc];renderSB();}
 function trend(p){if(p.length<2)return null;const l=p[p.length-1].hdv1||0,v=p[p.length-2].hdv1||0;return v?Math.round(((l-v)/v)*100):null;}
 
 // ═══ PRIX VIEW ═══
-function selRes(n){curRes=n;renderSB();renderMain();}
+function selRes(n){curRes=unesc(n);renderSB();renderMain();}
 function bl(p){const o=[];if(p.hdv1)o.push({l:'x1',u:p.hdv1});if(p.hdv10)o.push({l:'x10',u:Math.round(p.hdv10/10)});if(p.hdv100)o.push({l:'x100',u:Math.round(p.hdv100/100)});if(!o.length)return null;o.sort((a,b)=>a.u-b.u);return o[0].l;}
 function renderRent(p){
   if(!p)return '';const o=[{l:'x1',t:p.hdv1,u:p.hdv1},{l:'x10',t:p.hdv10,u:p.hdv10?Math.round(p.hdv10/10):null},{l:'x100',t:p.hdv100,u:p.hdv100?Math.round(p.hdv100/100):null}].filter(x=>x.u);
@@ -543,7 +543,7 @@ function renderStats(){
     }).join('')+'</div><div id="perso-detail"></div>':'<div class="empty"><p>Aucun perso pour le moment.<br>Cree un perso avec un capital de depart pour commencer a suivre tes investissements.</p></div>'}`;
   if(window._selPerso)renderPersoDetail();
 }
-function selPerso(n){window._selPerso=window._selPerso===n?null:n;renderStats();}
+function selPerso(n){n=unesc(n);window._selPerso=window._selPerso===n?null:n;renderStats();}
 function renderPersoDetail(){
   const p=persos.find(x=>x.name===window._selPerso);if(!p)return;
   const el=document.getElementById('perso-detail');if(!el)return;
@@ -612,7 +612,7 @@ function renderPersoDetail(){
 }
 
 // ═══ MODAL ACTIONS ═══
-function delPrix(resName,id){
+function delPrix(resName,id){resName=unesc(resName);
   if(!confirm('Supprimer ce prix ?'))return;
   if(!P[resName])return;
   P[resName]=P[resName].filter(p=>(p.id||0)!==id);
@@ -783,7 +783,7 @@ function submitPerso(){
   closeM('perso-m');document.getElementById('pm-name').value='';document.getElementById('pm-kamas').value='';
   T(name+' cree !');renderStats();
 }
-function delPerso(n){if(!confirm('Supprimer '+n+' ?'))return;persos=persos.filter(p=>p.name!==n);achats=achats.filter(a=>a.perso!==n);ventes=ventes.filter(v=>v.perso!==n);sPe();sA();sV();whSync();T('Supprime');renderStats();}
+function delPerso(n){n=unesc(n);if(!confirm('Supprimer '+n+' ?'))return;persos=persos.filter(p=>p.name!==n);achats=achats.filter(a=>a.perso!==n);ventes=ventes.filter(v=>v.perso!==n);sPe();sA();sV();whSync();T('Supprime');renderStats();}
 function openEditRes(){
   if(!curRes)return;
   const r=R.find(x=>x.name===curRes);if(!r)return;
@@ -906,7 +906,8 @@ function closeM(id){document.getElementById(id).classList.remove('open')}
 document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
 function F(n){if(!n&&n!==0)return'0';return n.toLocaleString('fr-FR');}
 function D(d){if(!d)return'--';const p=d.split('-');return p[2]+'/'+p[1];}
-function esc(s){return s.replace(/'/g,"\'");}
+function esc(s){return encodeURIComponent(s);}
+function unesc(s){return decodeURIComponent(s);}
 function T(m,e){const t=document.getElementById('toast');t.textContent=m;t.className='show'+(e?' err':'');clearTimeout(t._t);t._t=setTimeout(()=>t.className='',3000);}
 
 // ═══ INIT ═══
