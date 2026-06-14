@@ -369,6 +369,7 @@ async function whSync(){if(!C.sheetWebhook)return;try{
   await fetch(C.sheetWebhook,{method:'POST',mode:'no-cors',body:JSON.stringify({type:'sync_ventes',data:ventes})});
 }catch(e){}}
 function I(v){return parseInt(v)||null}
+function getEarned(v){return v.earned||(v.soldQty*v.pricePerLot)||0;}
 
 // ═══ SIDEBAR ═══
 function renderSB(){
@@ -480,7 +481,7 @@ function renderVentes(){
   const d=document.getElementById('v-ventes');
   const totalEnVente=ventes.filter(v=>v.soldQty<v.qty).length;
   const totalVendu=ventes.filter(v=>v.soldQty>=v.qty).length;
-  const totalGagne=ventes.reduce((s,v)=>s+(v.earned||0),0);
+  const totalGagne=ventes.reduce((s,v)=>s+(getEarned(v)),0);
   d.innerHTML=`
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;flex-wrap:wrap">
       <div><h2 style="font-family:Cinzel,serif;font-size:1.1rem;color:var(--al)">Ventes</h2>
@@ -495,7 +496,7 @@ function renderVentes(){
     ${ventes.length?ventes.map((v,i)=>{
       const pct=v.qty>0?Math.round((v.soldQty/v.qty)*100):0;
       const remaining=v.qty-v.soldQty;
-      const earned=v.earned||0;
+      const earned=getEarned(v);
       return `<div class="inv-item">
         <div class="inv-info">
           <div class="inv-name">${v.resource}</div>
@@ -504,7 +505,7 @@ function renderVentes(){
         </div>
         <div class="inv-progress">
           <div class="inv-bar-bg"><div class="inv-bar" style="width:${pct}%;${pct>=100?'background:var(--green)':''}"></div></div>
-          <div class="inv-bar-label">${v.soldQty}/${v.qty} vendus — ${F(v.earned||0)} gagnes</div>
+          <div class="inv-bar-label">${v.soldQty}/${v.qty} vendus — ${F(getEarned(v))} gagnes</div>
         </div>
         <div class="inv-actions">
           ${remaining>0?`<button class="btn btn-gold btn-sm" onclick="openSell(${i})">Vendu</button>`:'<span class="badge sold">Tout vendu</span>'}
@@ -527,7 +528,7 @@ function renderStats(){
       const pa=achats.filter(a=>a.perso===p.name);
       const pv=ventes.filter(v=>v.perso===p.name);
       const spent=pa.reduce((s,a)=>s+a.total,0);
-      const earned=pv.reduce((s,v)=>s+(v.earned||0),0);
+      const earned=pv.reduce((s,v)=>s+(getEarned(v)),0);
       const bal=p.startKamas-spent+earned;
       const profit=earned-spent;
       const roi=spent>0?Math.round((profit/spent)*100):0;
@@ -552,7 +553,7 @@ function renderPersoDetail(){
   const venduComplet=pv.filter(v=>v.soldQty>=v.qty);
 
   const ventesParRes={};
-  pv.forEach(v=>{if(!ventesParRes[v.resource])ventesParRes[v.resource]={qty:0,kamas:0};ventesParRes[v.resource].qty+=v.soldQty;ventesParRes[v.resource].kamas+=(v.earned||0);});
+  pv.forEach(v=>{if(!ventesParRes[v.resource])ventesParRes[v.resource]={qty:0,kamas:0};ventesParRes[v.resource].qty+=v.soldQty;ventesParRes[v.resource].kamas+=(getEarned(v));});
   const topVentes=Object.entries(ventesParRes).sort((a,b)=>b[1].kamas-a[1].kamas);
 
   const achatsParRes={};
@@ -599,7 +600,7 @@ function renderPersoDetail(){
         +'<span class="badge sold">Vendu</span>'
         +'<span style="flex:1;font-weight:500">'+v.resource+'</span>'
         +'<span style="font-size:.78rem;color:var(--dim)">'+v.qty+' lots x'+v.lotSize+'</span>'
-        +'<span class="profit" style="font-weight:600">+'+F(v.earned||0)+'</span>'
+        +'<span class="profit" style="font-weight:600">+'+F(getEarned(v))+'</span>'
       +'</div>').join('')}
     </div>`:''}
     <div class="card" style="padding:0;overflow:hidden">
