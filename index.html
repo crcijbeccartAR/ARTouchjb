@@ -443,7 +443,7 @@ function renderMain(){
     </div></div><div class="cw"><canvas id="cc"></canvas></div></div>
     <div class="card" style="padding:0;overflow:hidden"><div style="padding:12px;font-size:.65rem;color:var(--dim);text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border)">Historique</div>
     <div style="overflow-x:auto"><table><thead><tr><th>Date</th><th>x1</th><th>x10</th><th>x100</th><th>Lot</th><th>Par</th><th></th></tr></thead>
-    <tbody>${[...all].reverse().slice(0,30).map(p=>`<tr><td>${D(p.date)}</td><td>${p.hdv1?F(p.hdv1):'--'}</td><td>${p.hdv10?F(p.hdv10):'--'}</td><td>${p.hdv100?F(p.hdv100):'--'}</td><td>${bl(p)?'<span class="badge best">'+bl(p)+'</span>':'--'}</td><td style="color:var(--dim)">${p.author||'--'}</td></tr>`).join('')}</tbody></table></div></div>`;
+    <tbody>${[...all].reverse().slice(0,30).map((p,i)=>`<tr><td>${D(p.date)}${p.time?' '+p.time:''}</td><td>${p.hdv1?F(p.hdv1):'--'}</td><td>${p.hdv10?F(p.hdv10):'--'}</td><td>${p.hdv100?F(p.hdv100):'--'}</td><td>${bl(p)?'<span class="badge best">'+bl(p)+'</span>':'--'}</td><td style="color:var(--dim)">${p.author||'--'}</td><td><button class="btn btn-danger btn-sm" style="padding:2px 6px;font-size:.6rem" onclick="delPrix(${all.length-1-i})">X</button></td></tr>`).join('')}</tbody></table></div></div>`;
   drawChart(pts);
 }
 function drawChart(pts){
@@ -612,13 +612,12 @@ function renderPersoDetail(){
 }
 
 // ═══ MODAL ACTIONS ═══
-function delPrix(resName,id){resName=unesc(resName);
+function delPrix(idx){
   if(!confirm('Supprimer ce prix ?'))return;
-  if(!P[resName])return;
-  P[resName]=P[resName].filter(p=>(p.id||0)!==id);
+  if(!P[curRes])return;
+  P[curRes].splice(idx,1);
   sP();T('Prix supprime');
-  if(curRes===resName)renderMain();
-  renderSB();
+  renderMain();renderSB();
 }
 function openPrix(){
   const s=document.getElementById('px-res');
