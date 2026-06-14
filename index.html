@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARTouchJB</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+  :root{--bg:#0b0f07;--surface:#121808;--s2:#192110;--border:#2a3d18;--accent:#8fbe4a;--al:#b2e060;--ad:#3a5a14;--brown:#a07840;--bl:#c4a060;--bd:#4a3818;--red:#e07a52;--green:#52c97a;--text:#cce8a8;--dim:#5a7a38}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;background-image:radial-gradient(ellipse at 15% 50%,rgba(40,70,15,.1) 0%,transparent 55%),radial-gradient(ellipse at 85% 20%,rgba(80,50,10,.07) 0%,transparent 50%)}
+
+  header{background:#070b04;border-bottom:1px solid var(--bd);padding:10px 20px;display:flex;align-items:center;gap:12px}
+  .logo{font-family:'Cinzel',serif;font-size:1.1rem;background:linear-gradient(90deg,var(--bl),var(--al));-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:3px}
+  .logo-sub{font-size:.6rem;color:var(--dim);letter-spacing:2px;text-transform:uppercase}
+  .hr{margin-left:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .sync-dot{width:7px;height:7px;border-radius:50%;background:var(--dim)}.sync-dot.online{background:var(--green);box-shadow:0 0 5px var(--green)}
+  .sync-label{font-size:.7rem;color:var(--dim)}
+  #cb{background:#100c06;border-bottom:1px solid var(--bd);padding:8px 20px;font-size:.78rem;color:var(--dim)}#cb a{color:var(--al)}#cb.hidden{display:none}
+
+  .nav{display:flex;background:var(--surface);border-bottom:1px solid var(--border);padding:0 16px;overflow-x:auto}
+  .nav button{padding:10px 16px;font-size:.8rem;color:var(--dim);cursor:pointer;border:none;border-bottom:2px solid transparent;background:none;font-family:'Inter',sans-serif;white-space:nowrap;transition:all .15s}
+  .nav button:hover{color:var(--text)}.nav button.on{color:var(--al);border-bottom-color:var(--accent)}
+
+  .wrap{height:calc(100vh - 88px);overflow-y:auto;padding:18px 22px}
+  .wrap.grid{display:grid;grid-template-columns:220px 1fr;height:calc(100vh - 88px);overflow:visible;padding:0}
+  .wrap.grid>.sidebar{overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);padding:10px}
+  .wrap.grid>.main{overflow-y:auto;padding:18px 22px}
+
+  .search-box{position:relative;margin-bottom:8px}.search-box input{width:100%;background:var(--s2);border:1px solid var(--border);color:var(--text);padding:7px 10px 7px 28px;border-radius:6px;font-size:.78rem;outline:none}
+  .search-box input::placeholder{color:var(--dim)}.search-box input:focus{border-color:var(--ad)}
+  .search-box::before{content:'\2315';position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:.9rem;color:var(--dim)}
+  .btn-add{width:100%;background:transparent;border:1px dashed var(--ad);color:var(--accent);padding:6px;border-radius:6px;font-size:.78rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;margin-bottom:8px}
+  .btn-add:hover{background:rgba(90,138,40,.1);border-color:var(--accent)}
+  .cat-label{font-size:.6rem;font-weight:600;letter-spacing:1.5px;color:var(--dim);padding:10px 4px 4px;text-transform:uppercase;border-top:1px solid var(--border);margin-top:4px}
+  .cat-label:first-child{border-top:none;margin-top:0}
+  .subcat-toggle{display:flex;align-items:center;gap:6px;padding:6px 8px;cursor:pointer;font-size:.7rem;font-weight:600;letter-spacing:1px;color:var(--dim);text-transform:uppercase;border-radius:4px;transition:background .1s}
+  .subcat-toggle:hover{background:var(--s2)}
+  .subcat-toggle .arrow{transition:transform .2s;font-size:.6rem}
+  .subcat-toggle .arrow.open{transform:rotate(90deg)}
+  .subcat-items{display:none;padding-left:8px}.subcat-items.open{display:block}
+  .ri{display:flex;align-items:center;gap:8px;padding:7px 8px;cursor:pointer;font-size:.82rem;border-left:2px solid transparent;border-radius:0 4px 4px 0;transition:background .1s}
+  .ri:hover{background:var(--s2)}.ri.on{background:var(--s2);border-left-color:var(--accent);color:var(--al)}
+  .ri .rn{flex:1}.ri .tr{font-size:.67rem;font-weight:600}
+  .up{color:var(--red)}.down{color:var(--green)}.flat{color:var(--dim)}
+
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:14px}
+  .card-title{font-size:.68rem;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+  .ct{display:flex;gap:5px;margin-left:auto}
+  .ct button{background:transparent;border:1px solid var(--border);color:var(--dim);padding:3px 9px;border-radius:4px;font-size:.7rem;cursor:pointer;font-family:'Inter',sans-serif}
+  .ct button.on{background:var(--ad);border-color:var(--accent);color:var(--al)}
+  .cw{position:relative;height:230px}
+
+  .stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:14px}
+  .stat{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px}
+  .stat .lbl{font-size:.64rem;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+  .stat .val{font-size:1.1rem;font-weight:600}.stat .val span{font-size:.65rem;color:var(--dim)}
+  .stat .chg{font-size:.7rem;margin-top:3px;font-weight:500}
+
+  .rent-card{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--brown);border-radius:8px;padding:14px;margin-bottom:14px;display:flex;flex-wrap:wrap;gap:12px}
+  .rent-title{font-size:.7rem;color:var(--dim);text-transform:uppercase;letter-spacing:1px;width:100%}
+  .rl{flex:1;min-width:100px;background:var(--s2);border:1px solid var(--border);border-radius:7px;padding:10px;text-align:center}
+  .rl.best{border-color:var(--accent);background:rgba(90,138,40,.12)}
+  .rl .rll{font-size:.72rem;color:var(--dim);font-weight:600;margin-bottom:4px}.rl.best .rll{color:var(--al)}
+  .rl .rlp{font-size:1rem;font-weight:600}.rl .rlt{font-size:.68rem;color:var(--dim);margin-top:2px}
+  .rl .rlb{display:inline-block;margin-top:4px;font-size:.63rem;font-weight:700;padding:2px 6px;border-radius:3px;background:rgba(90,138,40,.2);color:var(--al)}
+  .rl .rlb.bad{background:rgba(224,122,82,.15);color:var(--red)}
+
+  .alert{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:7px;font-size:.78rem;font-weight:500;margin-bottom:12px}
+  .alert.warn{background:rgba(224,122,82,.1);border:1px solid rgba(224,122,82,.3);color:var(--red)}
+  .alert.good{background:rgba(82,201,122,.08);border:1px solid rgba(82,201,122,.25);color:var(--green)}
+  .alert.info{background:rgba(143,190,74,.08);border:1px solid rgba(143,190,74,.2);color:var(--accent)}
+
+  table{width:100%;border-collapse:collapse}
+  th{font-size:.64rem;color:var(--dim);text-transform:uppercase;letter-spacing:1px;padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);background:var(--s2)}
+  td{padding:8px 10px;font-size:.78rem;border-bottom:1px solid rgba(42,61,24,.4)}
+  tr:last-child td{border-bottom:none}
+  .badge{display:inline-block;padding:2px 6px;border-radius:3px;font-size:.68rem;font-weight:600}
+  .badge.sold{background:rgba(82,201,122,.12);color:var(--green)}
+  .badge.best{background:rgba(143,190,74,.15);color:var(--al)}
+  .badge.buy{background:rgba(224,122,82,.12);color:var(--red)}
+  .badge.sell{background:rgba(82,201,122,.12);color:var(--green)}
+  .badge.pending{background:rgba(160,120,64,.15);color:var(--bl)}
+
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:7px;font-size:.82rem;font-weight:600;cursor:pointer;border:none;font-family:'Inter',sans-serif;transition:opacity .15s,transform .1s}
+  .btn:hover{opacity:.87;transform:translateY(-1px)}.btn:active{transform:translateY(0)}
+  .btn-gold{background:linear-gradient(135deg,#4a7820,#8fbe4a);color:#0b0f07}
+  .btn-outline{background:transparent;border:1px solid var(--border);color:var(--dim)}
+  .btn-danger{background:rgba(224,122,82,.12);border:1px solid rgba(224,122,82,.3);color:var(--red)}
+  .btn-sm{padding:5px 11px;font-size:.75rem}
+
+  .empty{text-align:center;padding:50px 20px;color:var(--dim)}.empty p{font-size:.85rem;margin-bottom:14px}
+
+  .pg{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;margin-bottom:16px}
+  .pc{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;cursor:pointer;transition:border-color .15s}
+  .pc:hover{border-color:var(--ad)}.pc.on{border-color:var(--accent)}
+  .pn{font-family:'Cinzel',serif;font-size:.95rem;color:var(--al);margin-bottom:8px}
+  .ps{display:flex;justify-content:space-between;padding:3px 0;font-size:.76rem;border-bottom:1px solid rgba(42,61,24,.3)}.ps:last-child{border-bottom:none}
+  .ps .pl{color:var(--dim)}.ps .pv{font-weight:600}
+  .profit{color:var(--green)}.loss{color:var(--red)}
+
+  /* Inventory items */
+  .inv-item{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .inv-info{flex:1;min-width:150px}
+  .inv-name{font-weight:600;font-size:.88rem;margin-bottom:2px}
+  .inv-detail{font-size:.72rem;color:var(--dim)}
+  .inv-progress{flex:1;min-width:120px}
+  .inv-bar-bg{height:8px;background:var(--s2);border-radius:4px;overflow:hidden;margin-bottom:4px}
+  .inv-bar{height:100%;background:var(--accent);border-radius:4px;transition:width .3s}
+  .inv-bar-label{font-size:.68rem;color:var(--dim)}
+  .inv-actions{display:flex;gap:6px}
+
+  .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:100;align-items:center;justify-content:center}
+  .overlay.open{display:flex}
+  .modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px;width:420px;max-width:95vw}
+  .modal h2{font-family:'Cinzel',serif;color:var(--al);font-size:.92rem;margin-bottom:16px;letter-spacing:1px}
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:.68rem;color:var(--dim);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px}
+  .field input,.field select{width:100%;background:var(--s2);border:1px solid var(--border);color:var(--text);padding:8px 11px;border-radius:6px;font-size:.85rem;outline:none;font-family:'Inter',sans-serif}
+  .field input::placeholder{color:var(--dim)}.field input:focus,.field select:focus{border-color:var(--ad)}.field select option{background:var(--s2)}
+  .fr{display:grid;grid-template-columns:1fr 1fr;gap:10px}.fr3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+  .ma{display:flex;gap:8px;margin-top:16px}.ma .btn{flex:1;justify-content:center}
+  .btn-cancel{background:var(--s2);color:var(--dim);border:1px solid var(--border);font-family:'Inter',sans-serif;cursor:pointer}
+  .sl{font-size:.65rem;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border)}
+  .info-box{background:var(--s2);border-radius:7px;padding:11px;font-size:.76rem;color:var(--dim);line-height:1.6;margin-bottom:12px}
+  .info-box ol{padding-left:16px}.info-box code{background:rgba(143,190,74,.12);color:var(--al);padding:1px 5px;border-radius:3px;font-size:.72rem}
+  .divider{border:none;border-top:1px solid var(--border);margin:14px 0}
+
+  #toast{position:fixed;bottom:18px;right:18px;background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--green);padding:10px 16px;border-radius:7px;font-size:.8rem;opacity:0;transform:translateY(6px);transition:all .22s;z-index:200;pointer-events:none}
+  #toast.show{opacity:1;transform:translateY(0)}#toast.err{border-left-color:var(--red)}
+  ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+</style>
+</head>
+<body>
+
+<header>
+  <div><div class="logo">ARTouchJB</div><div class="logo-sub">Suivi des prix Dofus</div></div>
+  <div class="hr">
+    <div class="sync-dot" id="sd"></div><span class="sync-label" id="sl">Local</span>
+    <button class="btn btn-outline btn-sm" onclick="openM('sheets-m')">Google Sheets</button>
+    <button class="btn btn-outline btn-sm" onclick="openM('cfg-m')">Parametres</button>
+  </div>
+</header>
+<div id="cb">Non connecte. <a href="#" onclick="openM('sheets-m');return false">Configurer</a></div>
+
+<div class="nav" id="nav">
+  <button class="on" onclick="go('prix')">Prix du jour</button>
+  <button onclick="go('achats')">Achats</button>
+  <button onclick="go('ventes')">Ventes</button>
+  <button onclick="go('stats')">Statistiques</button>
+  <button onclick="go('craft')">Craft</button>
+</div>
+
+<!-- PRIX -->
+<div class="wrap grid" id="v-prix">
+  <div class="sidebar">
+    <div class="search-box"><input type="text" id="search" placeholder="Rechercher..." oninput="renderSB()"></div>
+    <button class="btn-add" onclick="openM('res-m')">+ Nouvelle ressource</button>
+    <div id="res-list"></div>
+  </div>
+  <div class="main" id="main"><div class="empty"><p>Selectionne une ressource dans la liste de gauche pour voir son evolution de prix, ou ajoute-en une nouvelle.</p></div></div>
+</div>
+
+<!-- ACHATS -->
+<div class="wrap" id="v-achats" style="display:none"></div>
+
+<!-- VENTES -->
+<div class="wrap" id="v-ventes" style="display:none"></div>
+
+<!-- STATS -->
+<div class="wrap" id="v-stats" style="display:none"></div>
+
+<!-- CRAFT -->
+<div class="wrap" id="v-craft" style="display:none"></div>
+
+<!-- MODALS -->
+<div class="overlay" id="prix-m"><div class="modal"><h2>Prix du jour</h2>
+  <div class="field"><label>Ressource</label><select id="px-res"></select></div>
+  <div class="fr3">
+    <div class="field"><label>x1</label><input type="number" id="px-1" min="0"></div>
+    <div class="field"><label>x10</label><input type="number" id="px-10" min="0"></div>
+    <div class="field"><label>x100</label><input type="number" id="px-100" min="0"></div>
+  </div>
+  <div class="ma"><button class="btn btn-cancel" onclick="closeM('prix-m')">Annuler</button><button class="btn btn-gold" onclick="submitPrix()">Enregistrer</button></div>
+</div></div>
+
+<div class="overlay" id="achat-m"><div class="modal"><h2>Nouvel achat</h2>
+  <div class="field"><label>Perso</label><select id="ac-perso"></select></div>
+  <div class="field"><label>Ressource</label><select id="ac-res"></select></div>
+  <div id="ac-preview" style="margin-bottom:12px"></div>
+  <div class="fr3">
+    <div class="field"><label>Taille du lot</label><select id="ac-lot"><option value="1">x1</option><option value="10">x10</option><option value="100">x100</option></select></div>
+    <div class="field"><label>Nombre de lots</label><input type="number" id="ac-qty" min="1" placeholder="ex: 10"></div>
+    <div class="field"><label>Prix par lot</label><input type="number" id="ac-price" min="0" placeholder="kamas"></div>
+  </div>
+  <div class="field"><label>Total (auto)</label><input type="text" id="ac-total" disabled></div>
+  <div class="ma"><button class="btn btn-cancel" onclick="closeM('achat-m')">Annuler</button><button class="btn btn-gold" onclick="submitAchat()">Acheter</button></div>
+</div></div>
+
+<div class="overlay" id="vente-m"><div class="modal"><h2>Mettre en vente</h2>
+  <div class="field"><label>Perso</label><select id="ve-perso"></select></div>
+  <div class="field"><label>Ressource</label><select id="ve-res"></select></div>
+  <div id="ve-preview" style="margin-bottom:12px"></div>
+  <div class="fr3">
+    <div class="field"><label>Taille du lot</label><select id="ve-lot"><option value="1">x1</option><option value="10">x10</option><option value="100">x100</option></select></div>
+    <div class="field"><label>Nombre de lots</label><input type="number" id="ve-qty" min="1" placeholder="ex: 100"></div>
+    <div class="field"><label>Prix par lot</label><input type="number" id="ve-price" min="0" placeholder="kamas"></div>
+  </div>
+  <div class="ma"><button class="btn btn-cancel" onclick="closeM('vente-m')">Annuler</button><button class="btn btn-gold" onclick="submitVente()">Mettre en vente</button></div>
+</div></div>
+
+<div class="overlay" id="editv-m"><div class="modal"><h2>Modifier le prix de vente</h2>
+  <div id="editv-info"></div>
+  <div class="field"><label>Nouveau prix par lot</label><input type="number" id="editv-price" min="0"></div>
+  <div class="ma"><button class="btn btn-cancel" onclick="closeM('editv-m')">Annuler</button><button class="btn btn-gold" onclick="saveEditVente()">Enregistrer</button></div>
+</div></div>
+
+<div class="overlay" id="sell-m"><div class="modal"><h2>Lots vendus</h2>
+  <div id="sell-info"></div>
+  <div class="field"><label>Combien de lots vendus ?</label><input type="number" id="sell-qty" min="1"></div>
+  <div class="ma"><button class="btn btn-cancel" onclick="closeM('sell-m')">Annuler</button><button class="btn btn-gold" onclick="submitSell()">Confirmer</button></div>
+</div></div>
+
+<div class="overlay" id="res-m"><div class="modal"><h2>Nouvelle ressource</h2>
+  <div class="field"><label>Nom</label><input type="text" id="rm-name" placeholder="ex: Patte d'Arakne"></div>
+  <div class="field"><label>Categorie</label><select id="rm-cat" onchange="document.getElementById('rm-subcat-wrap').style.display=(SUBCATS_MAP[this.value]&&SUBCATS_MAP[this.value].length)?'':'none'"><option>Alchimistes</option><option>Animaux</option><option>Bijoutiers</option><option>Bouchers & chasseurs</option><option>Boulangers</option><option>Bricoleurs</option><option>Bucherons</option><option>Cordonniers</option><option>Documents</option><option>Dofus & Trophees</option><option>Fee d'artifice</option><option>Figurines</option><option>Forgerons</option><option>Milice</option><option>Mineurs</option><option>Objets d'Apparats</option><option>Paysans</option><option>Pierres d'ames</option><option>Poissonniers & pecheurs</option><option selected>Ressources</option><option>Runes</option><option>Sculpteurs</option><option>Tailleurs</option></select></div>
+  <div class="field" id="rm-subcat-wrap"><label>Sous-categorie</label><select id="rm-subcat"></select></div>
+  <div class="ma"><button class="btn btn-cancel" onclick="closeM('res-m')">Annuler</button><button class="btn btn-gold" onclick="submitRes()">Ajouter</button></div>
+</div></div>
+
+<div class="overlay" id="edit-m"><div class="modal"><h2>Modifier la ressource</h2>
+  <div class="field"><label>Nom</label><input type="text" id="em-name" disabled style="opacity:.6"></div>
+  <div class="field"><label>Categorie</label><select id="em-cat" onchange="updateEditSubcat()"></select></div>
+  <div class="field" id="em-subcat-wrap"><label>Sous-categorie</label><select id="em-subcat"></select></div>
+  <div class="ma"><button class="btn btn-cancel" onclick="closeM('edit-m')">Annuler</button><button class="btn btn-gold" onclick="saveEditRes()">Enregistrer</button></div>
+</div></div>
+
+<div class="overlay" id="perso-m"><div class="modal"><h2>Creer un perso</h2>
+  <div class="field"><label>Nom</label><input type="text" id="pm-name" placeholder="ex: Drak"></div>
+  <div class="field"><label>Kamas de depart</label><input type="number" id="pm-kamas" placeholder="1000000" min="0"></div>
+  <div class="ma"><button class="btn btn-cancel" onclick="closeM('perso-m')">Annuler</button><button class="btn btn-gold" onclick="submitPerso()">Creer</button></div>
+</div></div>
+
+<div class="overlay" id="craft-m"><div class="modal" style="width:500px"><h2>Nouvelle recette</h2>
+  <div class="field"><label>Nom de l'item a crafter</label><input type="text" id="cr-name" placeholder="ex: Amulette du Bouftou"></div>
+  <div class="field"><label>Prix de vente estime</label><input type="number" id="cr-sell" placeholder="ex: 50000" min="0"></div>
+  <div class="sl">Ingredients</div>
+  <div id="cr-ingredients"></div>
+  <button class="btn btn-outline btn-sm" style="width:100%;margin:8px 0" onclick="addIngredient()">+ Ajouter un ingredient</button>
+  <div class="ma"><button class="btn btn-cancel" onclick="closeM('craft-m')">Annuler</button><button class="btn btn-gold" onclick="submitCraft()">Creer la recette</button></div>
+</div></div>
+
+<div class="overlay" id="sheets-m"><div class="modal" style="width:480px"><h2>Google Sheets</h2>
+  <button class="btn btn-outline" style="width:100%;justify-content:center;margin-bottom:14px" onclick="exportCSV()">Telecharger CSV</button>
+  <hr class="divider"><div class="sl">Lecture</div>
+  <div class="field"><label>ID du Sheet</label><input type="text" id="sh-id"></div>
+  <div class="field"><label>Cle API</label><input type="text" id="sh-key"></div>
+  <div class="field"><label>Onglet</label><input type="text" id="sh-tab" placeholder="Feuille1"></div>
+  <hr class="divider"><div class="sl">Ecriture</div>
+  <div class="field"><label>URL Webhook</label><input type="text" id="sh-wh"></div>
+  <div class="ma"><button class="btn btn-cancel" onclick="closeM('sheets-m')">Fermer</button><button class="btn btn-gold" onclick="saveSh()">Connecter</button></div>
+</div></div>
+
+<div class="overlay" id="cfg-m"><div class="modal"><h2>Parametres</h2>
+  <div class="field"><label>Pseudo</label><input type="text" id="cfg-pseudo"></div>
+  <div class="ma"><button class="btn btn-cancel" onclick="closeM('cfg-m')">Annuler</button><button class="btn btn-gold" onclick="saveCfg()">OK</button></div>
+</div></div>
+
+<div id="toast"></div>
+
+<script>
+// ═══ STATE ═══
+let C=JSON.parse(localStorage.getItem('artouchjb-cfg')||'{}');
+let R=JSON.parse(localStorage.getItem('artouchjb-res')||'[]');
+let P=JSON.parse(localStorage.getItem('artouchjb-prices')||'{}');
+let persos=JSON.parse(localStorage.getItem('artouchjb-persos')||'[]');
+let achats=JSON.parse(localStorage.getItem('artouchjb-achats')||'[]');
+let ventes=JSON.parse(localStorage.getItem('artouchjb-ventes')||'[]');
+let curRes=null,chart=null,cRange=30;
+let crafts=JSON.parse(localStorage.getItem('artouchjb-crafts')||'[]');
+function sC(){localStorage.setItem('artouchjb-crafts',JSON.stringify(crafts));}
+const CATS=['Alchimistes','Animaux','Bijoutiers','Bouchers & chasseurs','Boulangers','Bricoleurs','Bucherons','Cordonniers','Documents','Dofus & Trophees','Fee d\'artifice','Figurines','Forgerons','Milice','Mineurs','Objets d\'Apparats','Paysans','Pierres d\'ames','Poissonniers & pecheurs','Ressources','Runes','Sculpteurs','Tailleurs'];
+const SUBCATS_MAP={
+'Alchimistes':['Materiel d\'alchimie','Metaria','Objet de dons','Potion','Potion d\'oubli de maitrise','Potion d\'oubli de metier','Potion d\'oubli de sort','Potion d\'oubli Percepteur','Potion de conquete','Potion de forgemagie','Potion de teleportation','Teinture'],
+'Animaux':['Certificat de familier','Certificat de montilier','Certificat de monture','Familier','Fantome de Familier','Fantome de Montilier','Montilier','Objet vivant','Oeuf de familier','Potion de familier','Potion de montilier'],
+'Bijoutiers':['Amulette','Anneau'],
+'Bouchers & chasseurs':['Viande','Viande comestible','Viande conservee'],
+'Boulangers':['Friandise','Pain'],
+'Bricoleurs':['Arme magique','Clef','Objet d\'elevage','Prisme'],
+'Bucherons':['Bois','Bourgeon','Ecorce','Planche','Racine'],
+'Cordonniers':['Bottes','Ceinture'],
+'Documents':['Document','Parchemin d\'attitude','Parchemin d\'experience','Parchemin de caracteristique','Parchemin de sortilege'],
+'Dofus & Trophees':['Dofus','Embleme de Maitrise','Galet','Trophee'],
+'Fee d\'artifice':['Fee d\'artifice'],
+'Figurines':['Krosbouate'],
+'Forgerons':['Bouclier','Dague','Epee','Faux','Filet de capture','Hache','Marteau','Outil','Pelle','Pioche'],
+'Milice':['Parchemin de recherche'],
+'Mineurs':['Alliage','Minerai','Pierre brute','Pierre magique','Pierre precieuse'],
+'Objets d\'Apparats':['Arme d\'apparat','Arme Legendaire','Bouclier d\'apparat','Cape d\'apparat','Chapeau d\'apparat','Familier d\'apparat','Montilier d\'apparat','Pierre d\'ame'],
+'Paysans':['Cereale','Farine','Huile'],
+'Pierres d\'ames':['Pierre d\'ame pleine'],
+'Poissonniers & pecheurs':['Poisson','Poisson comestible','Poisson vide'],
+'Ressources':['Aile','Badge','Biere','Boisson','Carapace','Champignon','Coquille','Cuir','Emballage','Essence de gardien de donjon','Etoffe','Fleur','Fruit','Gelee','Graine','Laine','Legume','Nowel','Oeil','Oeuf','Oreille','Os','Patte','Peau','Peluche','Plante','Plume','Poil','Poudre','Queue','Rabmablague Caramel'],
+'Runes':['Rune de forgemagie'],
+'Sculpteurs':['Arc','Baguette','Baton'],
+'Tailleurs':['Cape','Chapeau','Sac a dos']
+};
+if(!R.length){R=[{name:'Rubis',cat:'Ressources'},{name:'Saphir',cat:'Ressources'},{name:'Emeraude',cat:'Ressources'},{name:'Plume de Piou',cat:'Ressources'},{name:'Kobalte',cat:'Ressources'},{name:'Fer',cat:'Ressources'},{name:'Potion de soin',cat:'Consommable'}];sR();}
+
+function sR(){localStorage.setItem('artouchjb-res',JSON.stringify(R))}
+function sP(){localStorage.setItem('artouchjb-prices',JSON.stringify(P))}
+function sPe(){localStorage.setItem('artouchjb-persos',JSON.stringify(persos))}
+function sA(){localStorage.setItem('artouchjb-achats',JSON.stringify(achats))}
+function sV(){localStorage.setItem('artouchjb-ventes',JSON.stringify(ventes))}
+
+// ═══ NAV ═══
+let view='prix';
+function go(v){
+  view=v;
+  document.querySelectorAll('.nav button').forEach((b,i)=>b.className=['prix','achats','ventes','stats','craft'][i]===v?'on':'');
+  ['prix','achats','ventes','stats','craft'].forEach(x=>{const el=document.getElementById('v-'+x);if(el)el.style.display=x===v?'':'none';});
+  if(v==='prix'){document.getElementById('v-prix').style.display='grid';}
+  if(v==='achats')renderAchats();
+  if(v==='ventes')renderVentes();
+  if(v==='stats')renderStats();
+  if(v==='craft')renderCraft();
+}
+
+// ═══ SHEETS ═══
+async function sync(){
+  if(!C.sheetId||!C.sheetKey)return;
+  try{
+    const t=encodeURIComponent(C.sheetTab||'Feuille1');
+    const r=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${C.sheetId}/values/${t}!A2:K?key=${C.sheetKey}`);
+    if(!r.ok)throw 0;const d=await r.json();const rows=d.values||[];
+    if(!rows.length){setOn(true);return;}
+    const sp={};
+    rows.forEach(r=>{const[dt,nm]=[r[0]||'',r[1]||''];if(!dt||!nm)return;if(!sp[nm])sp[nm]=[];
+      sp[nm].push({date:dt,hdv1:I(r[2]),hdv10:I(r[3]),hdv100:I(r[4]),achat:I(r[5]),vente1:I(r[6]),vente10:I(r[7]),vente100:I(r[8]),sold:r[9]||'non',author:r[10]||''});
+    });
+    Object.keys(sp).forEach(k=>{sp[k].sort((a,b)=>a.date.localeCompare(b.date));P[k]=sp[k];
+      if(!R.find(r=>r.name===k)){
+        let foundCat='Ressources',foundSub='Autre';
+        const nl=k.toLowerCase();
+        Object.entries(SUBCATS_MAP).forEach(([cat,subs])=>{
+          subs.forEach(s=>{if(nl.includes(s.toLowerCase())){foundCat=cat;foundSub=s;}});
+        });
+        R.push({name:k,cat:foundCat,subcat:foundSub});
+      }
+    });
+    sR();sP();setOn(true);function updateSubcatDropdown(){
+  const cat=document.getElementById('rm-cat').value;
+  const subs=SUBCATS_MAP[cat]||[];
+  document.getElementById('rm-subcat').innerHTML=subs.map(s=>'<option>'+s+'</option>').join('')+'<option>Autre</option>';
+  document.getElementById('rm-subcat-wrap').style.display=subs.length?'':'none';
+}
+document.getElementById('rm-cat').addEventListener('change',updateSubcatDropdown);
+updateSubcatDropdown();
+renderSB();if(curRes)renderMain();
+    document.getElementById('sl').textContent='Sync '+new Date().toLocaleTimeString('fr',{hour:'2-digit',minute:'2-digit'});
+  }catch(e){setOn(false);}
+}
+function setOn(o){document.getElementById('sd').className='sync-dot'+(o?' online':'');if(!o)document.getElementById('sl').textContent='Erreur';document.getElementById('cb').className=o?'hidden':'';}
+async function wh(data){if(!C.sheetWebhook)return;try{await fetch(C.sheetWebhook,{method:'POST',mode:'no-cors',body:JSON.stringify(data)});T('Envoye vers Sheets !');setTimeout(sync,3000);}catch(e){T('Erreur envoi',1);}}
+function I(v){return parseInt(v)||null}
+
+// ═══ SIDEBAR ═══
+function renderSB(){
+  const q=(document.getElementById('search')?.value||'').toLowerCase();
+  const filtered=R.filter(r=>r.name.toLowerCase().includes(q));
+  let html='';
+  CATS.forEach(c=>{
+    const items=filtered.filter(r=>r.cat===c);
+    if(!items.length)return;
+    const hasSubs=SUBCATS_MAP[c]&&SUBCATS_MAP[c].length>0;
+    if(hasSubs){
+      html+=`<div class="cat-label">${c}</div>`;
+      const subs={};
+      items.forEach(r=>{const sc=r.subcat||'Autre';if(!subs[sc])subs[sc]=[];subs[sc].push(r);});
+      const subKeys=Object.keys(subs).sort();
+      subKeys.forEach(sc=>{
+        const key=c+'_'+sc;
+        const isOpen=window._openSubs&&window._openSubs[key];
+        html+=`<div class="subcat-toggle" onclick="toggleSub('${esc(key)}')"><span class="arrow ${isOpen?'open':''}">&#9654;</span>${sc} (${subs[sc].length})</div>`;
+        html+=`<div class="subcat-items ${isOpen?'open':''}">${subs[sc].map(r=>{
+          const t=trend(P[r.name]||[]);
+          return `<div class="ri ${curRes===r.name?'on':''}" onclick="selRes('${esc(r.name)}')"><span class="rn">${r.name}</span>${t!==null?`<span class="tr ${t>=10?'up':t<=-5?'down':'flat'}">${t>0?'+':''}${t}%</span>`:''}</div>`;
+        }).join('')}</div>`;
+      });
+    } else {
+      html+=`<div class="cat-label">${c}</div>`;
+      html+=items.map(r=>{
+        const t=trend(P[r.name]||[]);
+        return `<div class="ri ${curRes===r.name?'on':''}" onclick="selRes('${esc(r.name)}')"><span class="rn">${r.name}</span>${t!==null?`<span class="tr ${t>=10?'up':t<=-5?'down':'flat'}">${t>0?'+':''}${t}%</span>`:''}</div>`;
+      }).join('');
+    }
+  });
+  document.getElementById('res-list').innerHTML=html;
+}
+if(!window._openSubs)window._openSubs={};
+function toggleSub(sc){window._openSubs[sc]=!window._openSubs[sc];renderSB();}
+function trend(p){if(p.length<2)return null;const l=p[p.length-1].hdv1||0,v=p[p.length-2].hdv1||0;return v?Math.round(((l-v)/v)*100):null;}
+
+// ═══ PRIX VIEW ═══
+function selRes(n){curRes=n;renderSB();renderMain();}
+function bl(p){const o=[];if(p.hdv1)o.push({l:'x1',u:p.hdv1});if(p.hdv10)o.push({l:'x10',u:Math.round(p.hdv10/10)});if(p.hdv100)o.push({l:'x100',u:Math.round(p.hdv100/100)});if(!o.length)return null;o.sort((a,b)=>a.u-b.u);return o[0].l;}
+function renderRent(p){
+  if(!p)return '';const o=[{l:'x1',t:p.hdv1,u:p.hdv1},{l:'x10',t:p.hdv10,u:p.hdv10?Math.round(p.hdv10/10):null},{l:'x100',t:p.hdv100,u:p.hdv100?Math.round(p.hdv100/100):null}].filter(x=>x.u);
+  if(o.length<2)return '';const mn=Math.min(...o.map(x=>x.u));
+  return `<div class="rent-card"><div class="rent-title">Meilleur lot</div>${o.map(x=>`<div class="rl ${x.u===mn?'best':''}"><div class="rll">Lot ${x.l}</div><div class="rlp">${F(x.u)} /u</div><div class="rlt">Total: ${F(x.t)} kamas</div>${x.u===mn?'<div class="rlb">Meilleur</div>':`<div class="rlb bad">+${Math.round((x.u/mn-1)*100)}%</div>`}</div>`).join('')}</div>`;
+}
+function renderMain(){
+  const r=R.find(x=>x.name===curRes);if(!r)return;
+  const all=P[r.name]||[],pts=all.slice(-cRange),last=pts[pts.length-1]||null,prev=pts[pts.length-2]||null;
+  const t=(last?.hdv1&&prev?.hdv1)?Math.round(((last.hdv1-prev.hdv1)/prev.hdv1)*100):null;
+  let al='';if(t!==null){if(t>=10)al=`<div class="alert warn">+${t}% — vendre</div>`;else if(t<=-10)al=`<div class="alert good">${t}% — attends</div>`;else al=`<div class="alert info">Stable (${t>0?'+':''}${t}%)</div>`;}
+  document.getElementById('main').innerHTML=`
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+      <div><h2 style="font-family:Cinzel,serif;font-size:1.1rem;color:var(--al)">${r.name}</h2><p style="font-size:.72rem;color:var(--dim)">${r.cat}${r.subcat?' > '+r.subcat:''} - ${all.length} releves de prix</p></div>
+      <div style="margin-left:auto;display:flex;gap:8px">
+        <button class="btn btn-outline btn-sm" onclick="openEditRes()">Modifier</button>
+        <button class="btn btn-danger btn-sm" onclick="delRes()">Supprimer</button>
+        <button class="btn btn-gold" onclick="openPrix()">+ Prix du jour</button>
+      </div>
+    </div>${al}
+    <div class="stats">
+      <div class="stat"><div class="lbl">HDV x1</div><div class="val">${last?.hdv1?F(last.hdv1):'--'}</div>${t!==null?`<div class="chg ${t>=0?'up':'down'}">${t>=0?'+':''}${t}%</div>`:''}</div>
+      <div class="stat"><div class="lbl">HDV x10 /u</div><div class="val">${last?.hdv10?F(Math.round(last.hdv10/10)):'--'}</div></div>
+      <div class="stat"><div class="lbl">HDV x100 /u</div><div class="val">${last?.hdv100?F(Math.round(last.hdv100/100)):'--'}</div></div>
+    </div>
+    ${renderRent(last)}
+    <div class="card"><div class="card-title">Evolution<div class="ct">
+      <button class="${cRange===7?'on':''}" onclick="cRange=7;renderMain()">7j</button>
+      <button class="${cRange===30?'on':''}" onclick="cRange=30;renderMain()">30j</button>
+      <button class="${cRange===9999?'on':''}" onclick="cRange=9999;renderMain()">Tout</button>
+    </div></div><div class="cw"><canvas id="cc"></canvas></div></div>
+    <div class="card" style="padding:0;overflow:hidden"><div style="padding:12px;font-size:.65rem;color:var(--dim);text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border)">Historique</div>
+    <div style="overflow-x:auto"><table><thead><tr><th>Date</th><th>x1</th><th>x10</th><th>x100</th><th>Lot</th><th>Par</th><th></th></tr></thead>
+    <tbody>${[...all].reverse().slice(0,30).map(p=>`<tr><td>${D(p.date)}</td><td>${p.hdv1?F(p.hdv1):'--'}</td><td>${p.hdv10?F(p.hdv10):'--'}</td><td>${p.hdv100?F(p.hdv100):'--'}</td><td>${bl(p)?'<span class="badge best">'+bl(p)+'</span>':'--'}</td><td style="color:var(--dim)">${p.author||'--'}</td></tr>`).join('')}</tbody></table></div></div>`;
+  drawChart(pts);
+}
+function drawChart(pts){
+  const ctx=document.getElementById('cc');if(!ctx)return;if(chart)chart.destroy();
+  const lh=[...pts].reverse().find(p=>p.hdv1)?.hdv1;
+  chart=new Chart(ctx,{type:'line',data:{labels:pts.map(p=>D(p.date)),datasets:[
+    {label:'x1',data:pts.map(p=>p.hdv1||null),borderColor:'#8fbe4a',backgroundColor:'rgba(143,190,74,.08)',borderWidth:2,fill:true,tension:.4,pointRadius:3,pointBackgroundColor:'#8fbe4a',spanGaps:true},
+    {label:'x10/u',data:pts.map(p=>p.hdv10?Math.round(p.hdv10/10):null),borderColor:'#c4a060',borderWidth:1.5,borderDash:[4,3],pointRadius:2,spanGaps:true,fill:false,tension:.4},
+    {label:'x100/u',data:pts.map(p=>p.hdv100?Math.round(p.hdv100/100):null),borderColor:'#a07840',borderWidth:1.5,borderDash:[2,3],pointRadius:2,spanGaps:true,fill:false,tension:.4},
+    {label:'+10%',data:lh?pts.map(()=>Math.round(lh*1.1)):[],borderColor:'rgba(224,122,82,.4)',borderWidth:1,borderDash:[6,4],pointRadius:0,fill:false}
+  ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{labels:{color:'#5a7a38',font:{size:11},boxWidth:12}},tooltip:{backgroundColor:'#121808',borderColor:'#2a3d18',borderWidth:1,titleColor:'#cce8a8',bodyColor:'#5a7a38',callbacks:{label:c=>c.raw!=null?` ${F(c.raw)} kamas`:' --'}}},scales:{x:{grid:{color:'rgba(42,61,24,.5)'},ticks:{color:'#5a7a38',font:{size:10},maxTicksLimit:10}},y:{grid:{color:'rgba(42,61,24,.5)'},ticks:{color:'#5a7a38',font:{size:10},callback:v=>F(v)}}}}});
+}
+
+// ═══ ACHATS VIEW ═══
+function renderAchats(){
+  const d=document.getElementById('v-achats');
+  const pa=achats.sort((a,b)=>b.date.localeCompare(a.date));
+  d.innerHTML=`
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+      <h2 style="font-family:Cinzel,serif;font-size:1.1rem;color:var(--al)">Achats</h2>
+      <button class="btn btn-gold" style="margin-left:auto" onclick="openAchat()">+ Nouvel achat</button>
+    </div>
+    ${pa.length?`<div class="card" style="padding:0;overflow:hidden"><div style="overflow-x:auto"><table>
+      <thead><tr><th>Date</th><th>Perso</th><th>Ressource</th><th>Lot</th><th>Qte</th><th>Prix/lot</th><th>Total</th></tr></thead>
+      <tbody>${pa.map(a=>`<tr>
+        <td>${D(a.date)}</td><td>${a.perso}</td><td>${a.resource}</td>
+        <td>x${a.lotSize}</td><td>${a.qty}</td><td>${F(a.pricePerLot)} k</td>
+        <td class="loss" style="font-weight:600">-${F(a.total)} k</td>
+      </tr>`).join('')}</tbody>
+    </table></div></div>`:'<div class="empty"><p>Aucun achat enregistre.</p></div>'}`;
+}
+
+// ═══ VENTES VIEW ═══
+function renderVentes(){
+  const d=document.getElementById('v-ventes');
+  const totalEnVente=ventes.filter(v=>v.soldQty<v.qty).length;
+  const totalVendu=ventes.filter(v=>v.soldQty>=v.qty).length;
+  const totalGagne=ventes.reduce((s,v)=>s+(v.earned||0),0);
+  d.innerHTML=`
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;flex-wrap:wrap">
+      <div><h2 style="font-family:Cinzel,serif;font-size:1.1rem;color:var(--al)">Ventes</h2>
+      <p style="font-size:.75rem;color:var(--dim);margin-top:2px">Suis tes mises en vente et marque les lots vendus au fur et a mesure.</p></div>
+      <button class="btn btn-gold" style="margin-left:auto" onclick="openVente()">+ Mettre en vente</button>
+    </div>
+    ${ventes.length?`<div class="stats" style="margin-bottom:14px">
+      <div class="stat"><div class="lbl">En vente</div><div class="val" style="color:var(--bl)">${totalEnVente}</div></div>
+      <div class="stat"><div class="lbl">Tout vendu</div><div class="val profit">${totalVendu}</div></div>
+      <div class="stat"><div class="lbl">Kamas gagnes</div><div class="val profit">${F(totalGagne)}</div></div>
+    </div>`:''}
+    ${ventes.length?ventes.map((v,i)=>{
+      const pct=v.qty>0?Math.round((v.soldQty/v.qty)*100):0;
+      const remaining=v.qty-v.soldQty;
+      const earned=v.earned||0;
+      return `<div class="inv-item">
+        <div class="inv-info">
+          <div class="inv-name">${v.resource}</div>
+          <div class="inv-detail">${v.perso} — ${v.qty} lots de x${v.lotSize} a ${F(v.pricePerLot)} k/lot</div>
+          <div class="inv-detail">Gagne: <span class="profit">${F(earned)} k</span> / ${F(v.qty*v.pricePerLot)} kamas</div>
+        </div>
+        <div class="inv-progress">
+          <div class="inv-bar-bg"><div class="inv-bar" style="width:${pct}%;${pct>=100?'background:var(--green)':''}"></div></div>
+          <div class="inv-bar-label">${v.soldQty}/${v.qty} vendus — ${F(v.earned||0)} gagnes</div>
+        </div>
+        <div class="inv-actions">
+          ${remaining>0?`<button class="btn btn-gold btn-sm" onclick="openSell(${i})">Vendu</button>`:'<span class="badge sold">Tout vendu</span>'}
+          <button class="btn btn-danger btn-sm" onclick="delVente(${i})">X</button>
+        </div>
+      </div>`;
+    }).join(''):'<div class="empty"><p>Aucune vente en cours.</p></div>'}`;
+}
+
+// ═══ STATS VIEW ═══
+function renderStats(){
+  const d=document.getElementById('v-stats');
+  d.innerHTML=`
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;flex-wrap:wrap">
+      <div><h2 style="font-family:Cinzel,serif;font-size:1.1rem;color:var(--al)">Statistiques</h2>
+      <p style="font-size:.75rem;color:var(--dim);margin-top:2px">Vue d'ensemble de tes persos, benefices et activite de trading.</p></div>
+      <button class="btn btn-gold" style="margin-left:auto" onclick="openM('perso-m')">+ Creer un perso</button>
+    </div>
+    ${persos.length?'<div class="pg">'+persos.map(p=>{
+      const pa=achats.filter(a=>a.perso===p.name);
+      const pv=ventes.filter(v=>v.perso===p.name);
+      const spent=pa.reduce((s,a)=>s+a.total,0);
+      const earned=pv.reduce((s,v)=>s+(v.earned||0),0);
+      const bal=p.startKamas-spent+earned;
+      const profit=earned-spent;
+      const roi=spent>0?Math.round((profit/spent)*100):0;
+      return `<div class="pc ${window._selPerso===p.name?'on':''}" onclick="selPerso('${esc(p.name)}')"><div class="pn">${p.name}</div>
+        <div class="ps"><span class="pl">Capital de depart</span><span class="pv">${F(p.startKamas)}</span></div>
+        <div class="ps"><span class="pl">Total depense</span><span class="pv loss">-${F(spent)}</span></div>
+        <div class="ps"><span class="pl">Revenus</span><span class="pv profit">+${F(earned)}</span></div>
+        <div class="ps" style="border-bottom:2px solid var(--border);padding-bottom:6px"><span class="pl">ROI</span><span class="pv ${roi>=0?'profit':'loss'}">${roi>=0?'+':''}${roi}%</span></div>
+        <div class="ps" style="padding-top:6px"><span class="pl" style="font-weight:600">Solde actuel</span><span class="pv" style="font-size:1.05rem;color:var(--al)">${F(bal)}</span></div>
+        <div class="ps"><span class="pl" style="font-weight:600">Benefice net</span><span class="pv ${profit>=0?'profit':'loss'}" style="font-size:1.05rem">${profit>=0?'+':''}${F(profit)}</span></div>
+      </div>`;
+    }).join('')+'</div><div id="perso-detail"></div>':'<div class="empty"><p>Aucun perso pour le moment.<br>Cree un perso avec un capital de depart pour commencer a suivre tes investissements.</p></div>'}`;
+  if(window._selPerso)renderPersoDetail();
+}
+function selPerso(n){window._selPerso=window._selPerso===n?null:n;renderStats();}
+function renderPersoDetail(){
+  const p=persos.find(x=>x.name===window._selPerso);if(!p)return;
+  const el=document.getElementById('perso-detail');if(!el)return;
+  const pa=achats.filter(a=>a.perso===p.name);
+  const pv=ventes.filter(v=>v.perso===p.name);
+  const enVente=pv.filter(v=>v.soldQty<v.qty);
+  const venduComplet=pv.filter(v=>v.soldQty>=v.qty);
+
+  const ventesParRes={};
+  pv.forEach(v=>{if(!ventesParRes[v.resource])ventesParRes[v.resource]={qty:0,kamas:0};ventesParRes[v.resource].qty+=v.soldQty;ventesParRes[v.resource].kamas+=(v.earned||0);});
+  const topVentes=Object.entries(ventesParRes).sort((a,b)=>b[1].kamas-a[1].kamas);
+
+  const achatsParRes={};
+  pa.forEach(a=>{if(!achatsParRes[a.resource])achatsParRes[a.resource]={qty:0,kamas:0};achatsParRes[a.resource].qty+=a.qty;achatsParRes[a.resource].kamas+=a.total;});
+  const topAchats=Object.entries(achatsParRes).sort((a,b)=>b[1].kamas-a[1].kamas);
+
+  el.innerHTML=`
+    <hr style="border:none;border-top:1px solid var(--border);margin:20px 0">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <h3 style="font-family:Cinzel,serif;color:var(--al);font-size:1rem">${p.name} — Detail</h3>
+      <button class="btn btn-danger btn-sm" style="margin-left:auto" onclick="delPerso('${esc(p.name)}')">Supprimer ce perso</button>
+    </div>
+    <div class="stats" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))">
+      <div class="stat"><div class="lbl">Achats effectues</div><div class="val">${pa.length}</div></div>
+      <div class="stat"><div class="lbl">En vente</div><div class="val" style="color:var(--bl)">${enVente.length}</div></div>
+      <div class="stat"><div class="lbl">Tout vendu</div><div class="val profit">${venduComplet.length}</div></div>
+      <div class="stat"><div class="lbl">Ressources tradees</div><div class="val">${Object.keys({...ventesParRes,...achatsParRes}).length}</div></div>
+    </div>
+    ${topVentes.length?`<div class="card"><div class="card-title">Plus vendu (par kamas gagnes)</div>
+      ${topVentes.slice(0,5).map((tv,i)=>'<div style="display:flex;align-items:center;gap:10px;padding:8px 0;'+(i<Math.min(topVentes.length,5)-1?'border-bottom:1px solid rgba(42,61,24,.3)':'')+'">'
+        +'<span style="font-size:.75rem;color:var(--dim);width:20px">#'+(i+1)+'</span>'
+        +'<span style="flex:1;font-weight:500">'+tv[0]+'</span>'
+        +'<span style="font-size:.78rem;color:var(--dim)">'+tv[1].qty+' lots</span>'
+        +'<span class="profit" style="font-weight:600">+'+F(tv[1].kamas)+'</span>'
+      +'</div>').join('')}
+    </div>`:''}
+    ${topAchats.length?`<div class="card"><div class="card-title">Plus achete (par kamas depenses)</div>
+      ${topAchats.slice(0,5).map((ta,i)=>'<div style="display:flex;align-items:center;gap:10px;padding:8px 0;'+(i<Math.min(topAchats.length,5)-1?'border-bottom:1px solid rgba(42,61,24,.3)':'')+'">'
+        +'<span style="font-size:.75rem;color:var(--dim);width:20px">#'+(i+1)+'</span>'
+        +'<span style="flex:1;font-weight:500">'+ta[0]+'</span>'
+        +'<span style="font-size:.78rem;color:var(--dim)">'+ta[1].qty+' lots</span>'
+        +'<span class="loss" style="font-weight:600">-'+F(ta[1].kamas)+'</span>'
+      +'</div>').join('')}
+    </div>`:''}
+    ${enVente.length?`<div class="card"><div class="card-title">Actuellement en vente</div>
+      ${enVente.map(v=>{const pct=Math.round((v.soldQty/v.qty)*100);return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(42,61,24,.3)">'
+        +'<span style="flex:1"><span style="font-weight:500">'+v.resource+'</span><br><span style="font-size:.72rem;color:var(--dim)">'+v.qty+' lots x'+v.lotSize+' a '+F(v.pricePerLot)+'/lot</span></span>'
+        +'<div style="width:100px"><div class="inv-bar-bg"><div class="inv-bar" style="width:'+pct+'%"></div></div><div style="font-size:.65rem;color:var(--dim)">'+v.soldQty+'/'+v.qty+' vendus</div></div>'
+        +'<span style="font-size:.78rem;color:var(--dim)">'+F((v.qty-v.soldQty)*v.pricePerLot)+' restant</span>'
+      +'</div>';}).join('')}
+    </div>`:''}
+    ${venduComplet.length?`<div class="card"><div class="card-title">Ventes terminees</div>
+      ${venduComplet.map(v=>'<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(42,61,24,.3)">'
+        +'<span class="badge sold">Vendu</span>'
+        +'<span style="flex:1;font-weight:500">'+v.resource+'</span>'
+        +'<span style="font-size:.78rem;color:var(--dim)">'+v.qty+' lots x'+v.lotSize+'</span>'
+        +'<span class="profit" style="font-weight:600">+'+F(v.earned||0)+'</span>'
+      +'</div>').join('')}
+    </div>`:''}
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="padding:12px;font-size:.65rem;color:var(--dim);text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border)">Historique des achats</div>
+      ${pa.length?'<div style="overflow-x:auto"><table><thead><tr><th>Date</th><th>Ressource</th><th>Lot</th><th>Qte</th><th>Prix/lot</th><th>Total</th></tr></thead><tbody>'
+        +[...pa].reverse().map(a=>'<tr><td>'+D(a.date)+'</td><td>'+a.resource+'</td><td><span class="badge best">x'+a.lotSize+'</span></td><td>'+a.qty+'</td><td>'+F(a.pricePerLot)+'</td><td class="loss" style="font-weight:600">-'+F(a.total)+'</td></tr>').join('')
+        +'</tbody></table></div>':'<div class="empty" style="padding:16px"><p>Aucun achat.</p></div>'}
+    </div>`;
+}
+
+// ═══ MODAL ACTIONS ═══
+function delPrix(resName,id){
+  if(!confirm('Supprimer ce prix ?'))return;
+  if(!P[resName])return;
+  P[resName]=P[resName].filter(p=>(p.id||0)!==id);
+  sP();T('Prix supprime');
+  if(curRes===resName)renderMain();
+  renderSB();
+}
+function openPrix(){
+  const s=document.getElementById('px-res');
+  s.innerHTML=R.map(r=>`<option ${r.name===curRes?'selected':''}>${r.name}</option>`).join('');
+  openM('prix-m');
+}
+function submitPrix(){
+  const name=document.getElementById('px-res').value;
+  const h1=I(document.getElementById('px-1').value),h10=I(document.getElementById('px-10').value),h100=I(document.getElementById('px-100').value);
+  if(!h1&&!h10&&!h100){T('Entre un prix !',1);return;}
+  const now=new Date();
+  const dt=now.toISOString().split('T')[0];
+  const tm=now.toTimeString().slice(0,5);
+  if(!P[name])P[name]=[];
+  P[name].push({date:dt,time:tm,hdv1:h1||null,hdv10:h10||null,hdv100:h100||null,author:C.pseudo||'',id:Date.now()});
+  P[name].sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));sP();
+  wh({type:'price',date:dt,resource:name,hdv1:h1,hdv10:h10,hdv100:h100,author:C.pseudo||''});
+  closeM('prix-m');['px-1','px-10','px-100'].forEach(x=>document.getElementById(x).value='');
+  T('Prix enregistre !');renderSB();if(curRes===name)renderMain();
+}
+
+function getLastPrice(resName, lotSize) {
+  const pts = P[resName] || [];
+  if (!pts.length) return null;
+  const last = pts[pts.length - 1];
+  if (lotSize === 1) return last.hdv1 || null;
+  if (lotSize === 10) return last.hdv10 || null;
+  if (lotSize === 100) return last.hdv100 || null;
+  return null;
+}
+function autoFillPrice(resId, lotId, priceId) {
+  const res = document.getElementById(resId).value;
+  const lot = parseInt(document.getElementById(lotId).value);
+  const p = getLastPrice(res, lot);
+  if (p) document.getElementById(priceId).value = p;
+}
+function renderPricePreview(resName, targetId, mode) {
+  // mode: 'achat' = meilleur = moins cher, 'vente' = meilleur = plus cher
+  if (!mode) mode = 'achat';
+  const pts = P[resName] || [];
+  const el = document.getElementById(targetId);
+  if (!el) return;
+  if (!pts.length) { el.innerHTML = '<div style="font-size:.75rem;color:var(--dim);padding:8px;background:var(--s2);border-radius:6px">Aucun prix enregistre pour cette ressource.</div>'; return; }
+  const last = pts[pts.length - 1];
+  const opts = [
+    { l: 'x1', total: last.hdv1, pu: last.hdv1 },
+    { l: 'x10', total: last.hdv10, pu: last.hdv10 ? Math.round(last.hdv10 / 10) : null },
+    { l: 'x100', total: last.hdv100, pu: last.hdv100 ? Math.round(last.hdv100 / 100) : null }
+  ].filter(o => o.pu);
+  if (!opts.length) { el.innerHTML = ''; return; }
+  const mn = mode === 'vente' ? Math.max(...opts.map(o => o.pu)) : Math.min(...opts.map(o => o.pu));
+  el.innerHTML = '<div style="font-size:.63rem;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Prix du jour ('+D(last.date)+')</div><div style="display:flex;gap:6px">' +
+    opts.map(o => '<div style="flex:1;background:'+(o.pu===mn?'rgba(90,138,40,.15)':'var(--s2)')+';border:1px solid '+(o.pu===mn?'var(--accent)':'var(--border)')+';border-radius:6px;padding:8px;text-align:center">' +
+      '<div style="font-size:.68rem;color:'+(o.pu===mn?'var(--al)':'var(--dim)')+';font-weight:600;margin-bottom:3px">'+o.l+'</div>' +
+      '<div style="font-size:.95rem;font-weight:600">'+F(o.pu)+' k<span style="font-size:.6rem;color:var(--dim)"> /u</span></div>' +
+      '<div style="font-size:.65rem;color:var(--dim)">Total: '+F(o.total)+' kamas</div>' +
+      (o.pu===mn ? '<div style="font-size:.6rem;font-weight:700;color:var(--al);margin-top:3px">'+(mode==='vente'?'Plus rentable':'Meilleur')+'</div>' : '<div style="font-size:.6rem;font-weight:700;color:'+(mode==='vente'?'var(--dim)':'var(--red)')+';margin-top:3px">'+(mode==='vente'?Math.round((1-o.pu/mn)*100)+'% de moins':'+'+Math.round((o.pu/mn-1)*100)+'%')+'</div>') +
+    '</div>').join('') + '</div>';
+}
+function fillPersoSelect(id){document.getElementById(id).innerHTML=persos.map(p=>`<option>${p.name}</option>`).join('');}
+function fillResSelect(id){document.getElementById(id).innerHTML=R.map(r=>`<option>${r.name}</option>`).join('');}
+
+function openAchat(){
+  if(!persos.length){T('Cree un perso d\'abord !',1);go('stats');return;}
+  fillPersoSelect('ac-perso');fillResSelect('ac-res');
+  document.getElementById('ac-res').onchange=()=>{autoFillPrice('ac-res','ac-lot','ac-price');renderPricePreview(document.getElementById('ac-res').value,'ac-preview','achat');};
+  document.getElementById('ac-lot').onchange=()=>autoFillPrice('ac-res','ac-lot','ac-price');
+  const updateTotal=()=>{const q=I(document.getElementById('ac-qty').value)||0,p=I(document.getElementById('ac-price').value)||0;document.getElementById('ac-total').value=F(q*p)+' kamas';};
+  document.getElementById('ac-qty').oninput=document.getElementById('ac-price').oninput=updateTotal;
+  autoFillPrice('ac-res','ac-lot','ac-price');
+  renderPricePreview(document.getElementById('ac-res').value,'ac-preview','achat');
+  openM('achat-m');
+}
+function submitAchat(){
+  const perso=document.getElementById('ac-perso').value;
+  const res=document.getElementById('ac-res').value;
+  const lot=parseInt(document.getElementById('ac-lot').value);
+  const qty=I(document.getElementById('ac-qty').value);
+  const price=I(document.getElementById('ac-price').value);
+  if(!qty||!price){T('Remplis tout !',1);return;}
+  achats.push({date:new Date().toISOString().split('T')[0],perso,resource:res,lotSize:lot,qty,pricePerLot:price,total:qty*price});
+  sA();closeM('achat-m');
+  ['ac-qty','ac-price'].forEach(x=>document.getElementById(x).value='');
+  document.getElementById('ac-total').value='';
+  T('Achat enregistre ! -'+F(qty*price)+' kamas');renderAchats();
+}
+
+function openVente(){
+  if(!persos.length){T('Cree un perso d\'abord !',1);go('stats');return;}
+  fillPersoSelect('ve-perso');fillResSelect('ve-res');
+  document.getElementById('ve-res').onchange=()=>{autoFillPrice('ve-res','ve-lot','ve-price');renderPricePreview(document.getElementById('ve-res').value,'ve-preview','vente');};
+  document.getElementById('ve-lot').onchange=()=>autoFillPrice('ve-res','ve-lot','ve-price');
+  autoFillPrice('ve-res','ve-lot','ve-price');
+  renderPricePreview(document.getElementById('ve-res').value,'ve-preview','vente');
+  openM('vente-m');
+}
+function submitVente(){
+  const perso=document.getElementById('ve-perso').value;
+  const res=document.getElementById('ve-res').value;
+  const lot=parseInt(document.getElementById('ve-lot').value);
+  const qty=I(document.getElementById('ve-qty').value);
+  const price=I(document.getElementById('ve-price').value);
+  if(!qty||!price){T('Remplis tout !',1);return;}
+  ventes.push({date:new Date().toISOString().split('T')[0],perso,resource:res,lotSize:lot,qty,pricePerLot:price,soldQty:0});
+  sV();closeM('vente-m');
+  ['ve-qty','ve-price'].forEach(x=>document.getElementById(x).value='');
+  T(res+' mis en vente !');renderVentes();
+}
+
+let sellIdx=-1;
+function openSell(i){
+  sellIdx=i;const v=ventes[i];const rem=v.qty-v.soldQty;
+  document.getElementById('sell-info').innerHTML=`<div style="font-size:.85rem;margin-bottom:12px"><strong>${v.resource}</strong> — ${rem} lots restants (x${v.lotSize} a ${F(v.pricePerLot)} k/lot)</div>`;
+  document.getElementById('sell-qty').value='';document.getElementById('sell-qty').max=rem;
+  openM('sell-m');
+}
+function submitSell(){
+  const qty=I(document.getElementById('sell-qty').value);
+  if(!qty||qty<1){T('Entre un nombre !',1);return;}
+  const v=ventes[sellIdx];const rem=v.qty-v.soldQty;
+  if(qty>rem){T('Max '+rem+' lots !',1);return;}
+  const revenue=qty*v.pricePerLot;
+  v.soldQty+=qty;
+  if(!v.earned)v.earned=0;
+  v.earned+=revenue;
+  if(!v.salesLog)v.salesLog=[];
+  v.salesLog.push({date:new Date().toISOString().split('T')[0],qty,price:v.pricePerLot,total:revenue});
+  sV();closeM('sell-m');
+  T(qty+' lots vendus a '+F(v.pricePerLot)+'/lot ! +'+F(revenue)+' kamas');renderVentes();
+}
+let editVIdx=-1;
+function openEditVente(i){
+  editVIdx=i;const v=ventes[i];
+  document.getElementById('editv-info').innerHTML='<div style="font-size:.85rem;margin-bottom:12px"><strong>'+v.resource+'</strong> — '+(v.qty-v.soldQty)+' lots restants x'+v.lotSize+'<br>Prix actuel : <strong>'+F(v.pricePerLot)+'</strong> par lot</div>';
+  document.getElementById('editv-price').value=v.pricePerLot;
+  openM('editv-m');
+}
+function saveEditVente(){
+  const price=I(document.getElementById('editv-price').value);
+  if(!price||price<1){T('Entre un prix !',1);return;}
+  ventes[editVIdx].pricePerLot=price;
+  sV();closeM('editv-m');T('Prix mis a jour !');renderVentes();
+}
+function delVente(i){if(!confirm('Supprimer cette vente ?'))return;ventes.splice(i,1);sV();T('Supprime');renderVentes();}
+
+function submitRes(){
+  const name=document.getElementById('rm-name').value.trim(),cat=document.getElementById('rm-cat').value;
+  const subcat=(SUBCATS_MAP[cat]&&SUBCATS_MAP[cat].length)?document.getElementById('rm-subcat').value:'';
+  if(!name){T('Nom !',1);return;}if(R.find(r=>r.name===name)){T('Existe !',1);return;}
+  R.push({name,cat,subcat:subcat||''});sR();
+  const today=new Date().toISOString().split('T')[0];
+  if(!P[name])P[name]=[];
+  P[name].push({date:today,time:new Date().toTimeString().slice(0,5),hdv1:null,hdv10:null,hdv100:null,author:C.pseudo||'',id:Date.now()});
+  sP();
+  wh({type:'price',date:today,resource:name,hdv1:'',hdv10:'',hdv100:'',author:C.pseudo||''});
+  closeM('res-m');document.getElementById('rm-name').value='';T(name+' ajoute !');renderSB();
+}
+function submitPerso(){
+  const name=document.getElementById('pm-name').value.trim(),k=parseInt(document.getElementById('pm-kamas').value)||0;
+  if(!name){T('Nom !',1);return;}if(persos.find(p=>p.name===name)){T('Existe !',1);return;}
+  persos.push({name,startKamas:k,created:new Date().toISOString().split('T')[0]});sPe();
+  closeM('perso-m');document.getElementById('pm-name').value='';document.getElementById('pm-kamas').value='';
+  T(name+' cree !');renderStats();
+}
+function delPerso(n){if(!confirm('Supprimer '+n+' ?'))return;persos=persos.filter(p=>p.name!==n);achats=achats.filter(a=>a.perso!==n);ventes=ventes.filter(v=>v.perso!==n);sPe();sA();sV();T('Supprime');renderStats();}
+function openEditRes(){
+  if(!curRes)return;
+  const r=R.find(x=>x.name===curRes);if(!r)return;
+  document.getElementById('em-name').value=r.name;
+  const catSel=document.getElementById('em-cat');
+  catSel.innerHTML=CATS.map(c=>'<option'+(c===r.cat?' selected':'')+'>'+c+'</option>').join('');
+  updateEditSubcat(r.subcat);
+  openM('edit-m');
+}
+function updateEditSubcat(current){
+  const cat=document.getElementById('em-cat').value;
+  const subs=SUBCATS_MAP[cat]||[];
+  const wrap=document.getElementById('em-subcat-wrap');
+  const sel=document.getElementById('em-subcat');
+  if(subs.length){
+    wrap.style.display='';
+    sel.innerHTML=subs.map(s=>'<option'+(s===current?' selected':'')+'>'+s+'</option>').join('')+'<option'+(current==='Autre'?' selected':'')+'>Autre</option>';
+  } else {
+    wrap.style.display='none';
+    sel.innerHTML='<option>Autre</option>';
+  }
+}
+function saveEditRes(){
+  const r=R.find(x=>x.name===curRes);if(!r)return;
+  r.cat=document.getElementById('em-cat').value;
+  const subs=SUBCATS_MAP[r.cat]||[];
+  r.subcat=subs.length?document.getElementById('em-subcat').value:'';
+  sR();closeM('edit-m');renderSB();renderMain();T('Ressource modifiee !');
+}
+function delRes(){if(!curRes||!confirm('Supprimer ?'))return;wh({type:'delete',resource:curRes});R=R.filter(r=>r.name!==curRes);delete P[curRes];sR();sP();curRes=null;document.getElementById('main').innerHTML='<div class="empty"><p>Supprime.</p></div>';renderSB();}
+
+function saveSh(){C.sheetId=document.getElementById('sh-id').value.trim();C.sheetKey=document.getElementById('sh-key').value.trim();C.sheetTab=document.getElementById('sh-tab').value.trim()||'Feuille1';C.sheetWebhook=document.getElementById('sh-wh').value.trim();localStorage.setItem('artouchjb-cfg',JSON.stringify(C));closeM('sheets-m');T('Connexion...');sync().then(()=>{if(document.getElementById('sd').classList.contains('online'))setInterval(sync,30000);});}
+function saveCfg(){C.pseudo=document.getElementById('cfg-pseudo').value.trim();localStorage.setItem('artouchjb-cfg',JSON.stringify(C));closeM('cfg-m');T('OK !');}
+function renderCraft(){
+  const d=document.getElementById('v-craft');
+  d.innerHTML=`
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;flex-wrap:wrap">
+      <div><h2 style="font-family:Cinzel,serif;font-size:1.1rem;color:var(--al)">Calculateur de Craft</h2>
+      <p style="font-size:.75rem;color:var(--dim);margin-top:2px">Cree des recettes et verifie si le craft est rentable par rapport aux prix du jour.</p></div>
+      <button class="btn btn-gold" style="margin-left:auto" onclick="openCraft()">+ Nouvelle recette</button>
+    </div>
+    ${crafts.length?crafts.map((c,i)=>{
+      let totalCost=0;let missing=false;
+      const ingDetails=c.ingredients.map(ing=>{
+        const pts=P[ing.resource]||[];
+        const lastPrice=pts.length?pts[pts.length-1]:null;
+        const pu=lastPrice?(lastPrice.hdv1||null):null;
+        const cost=pu?pu*ing.qty:null;
+        if(cost)totalCost+=cost;else missing=true;
+        return {name:ing.resource,qty:ing.qty,pu,cost};
+      });
+      const profit=c.sellPrice?c.sellPrice-totalCost:null;
+      const margin=c.sellPrice&&totalCost?Math.round(((c.sellPrice-totalCost)/totalCost)*100):null;
+      return `<div class="card" style="margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <h3 style="font-family:Cinzel,serif;color:var(--al);font-size:.95rem">${c.name}</h3>
+          <div style="margin-left:auto;display:flex;gap:6px">
+            <button class="btn btn-danger btn-sm" onclick="delCraft(${i})">Supprimer</button>
+          </div>
+        </div>
+        <div class="stats" style="grid-template-columns:repeat(auto-fill,minmax(140px,1fr));margin-bottom:12px">
+          <div class="stat"><div class="lbl">Cout de craft</div><div class="val ${missing?'':'loss'}">${missing?'Prix manquants':F(totalCost)}</div></div>
+          <div class="stat"><div class="lbl">Prix de vente</div><div class="val">${c.sellPrice?F(c.sellPrice):'--'}</div></div>
+          <div class="stat"><div class="lbl">Benefice</div><div class="val ${profit>=0?'profit':'loss'}">${profit!==null?(profit>=0?'+':'')+F(profit):'--'}</div></div>
+          <div class="stat"><div class="lbl">Marge</div><div class="val ${margin>=0?'profit':'loss'}">${margin!==null?(margin>=0?'+':'')+margin+'%':'--'}</div></div>
+        </div>
+        <div style="font-size:.65rem;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Ingredients</div>
+        ${ingDetails.map(ig=>'<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(42,61,24,.3)">'
+          +'<span style="flex:1;font-weight:500">'+ig.name+'</span>'
+          +'<span style="font-size:.78rem;color:var(--dim)">x'+ig.qty+'</span>'
+          +'<span style="font-size:.78rem;color:var(--dim)">'+(ig.pu?F(ig.pu)+'/u':'pas de prix')+'</span>'
+          +'<span style="font-weight:600;'+(ig.cost?'':'color:var(--red)')+'">'+(ig.cost?F(ig.cost):'?')+'</span>'
+        +'</div>').join('')}
+      </div>`;
+    }).join(''):'<div class="empty"><p>Aucune recette.<br>Cree une recette pour calculer si le craft est rentable.</p></div>'}
+  `;
+}
+
+let ingCount=0;
+function openCraft(){
+  document.getElementById('cr-name').value='';
+  document.getElementById('cr-sell').value='';
+  document.getElementById('cr-ingredients').innerHTML='';
+  ingCount=0;
+  addIngredient();addIngredient();
+  openM('craft-m');
+}
+function addIngredient(){
+  const div=document.getElementById('cr-ingredients');
+  const idx=ingCount++;
+  const opts=R.map(r=>'<option>'+r.name+'</option>').join('');
+  div.insertAdjacentHTML('beforeend',
+    '<div class="fr" style="margin-bottom:6px;grid-template-columns:1fr 80px 30px" id="ing-'+idx+'">'
+    +'<select class="ing-res" style="background:var(--s2);border:1px solid var(--border);color:var(--text);padding:7px;border-radius:5px;font-size:.82rem;font-family:Inter,sans-serif">'+opts+'</select>'
+    +'<input type="number" class="ing-qty" placeholder="Qte" min="1" style="background:var(--s2);border:1px solid var(--border);color:var(--text);padding:7px;border-radius:5px;font-size:.82rem">'
+    +'<button onclick="document.getElementById(\'ing-'+idx+'\').remove()" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:1rem">X</button>'
+    +'</div>');
+}
+function submitCraft(){
+  const name=document.getElementById('cr-name').value.trim();
+  const sell=I(document.getElementById('cr-sell').value);
+  if(!name){T('Entre un nom !',1);return;}
+  const ingredients=[];
+  document.querySelectorAll('#cr-ingredients .fr').forEach(row=>{
+    const res=row.querySelector('.ing-res').value;
+    const qty=parseInt(row.querySelector('.ing-qty').value)||0;
+    if(res&&qty>0)ingredients.push({resource:res,qty});
+  });
+  if(!ingredients.length){T('Ajoute des ingredients !',1);return;}
+  crafts.push({name,sellPrice:sell,ingredients});
+  sC();closeM('craft-m');T(name+' ajoutee !');renderCraft();
+}
+function delCraft(i){if(!confirm('Supprimer cette recette ?'))return;crafts.splice(i,1);sC();T('Recette supprimee');renderCraft();}
+
+function exportCSV(){const rows=[['Date','Ressource','x1','x10','x100','Auteur']];Object.entries(P).forEach(([n,pts])=>pts.forEach(p=>rows.push([p.date,n,p.hdv1||'',p.hdv10||'',p.hdv100||'',p.author||''])));const b=new Blob([rows.map(r=>r.join(',')).join('\n')],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='artouchjb.csv';a.click();T('CSV !');}
+
+// ═══ UTILS ═══
+function openM(id){document.getElementById(id).classList.add('open')}
+function closeM(id){document.getElementById(id).classList.remove('open')}
+document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
+function F(n){if(!n&&n!==0)return'0';return n.toLocaleString('fr-FR');}
+function D(d){if(!d)return'--';const p=d.split('-');return p[2]+'/'+p[1];}
+function esc(s){return s.replace(/'/g,"\'");}
+function T(m,e){const t=document.getElementById('toast');t.textContent=m;t.className='show'+(e?' err':'');clearTimeout(t._t);t._t=setTimeout(()=>t.className='',3000);}
+
+// ═══ INIT ═══
+renderSB();
+if(C.sheetId&&C.sheetKey){document.getElementById('sh-id').value=C.sheetId;document.getElementById('sh-key').value=C.sheetKey;document.getElementById('sh-tab').value=C.sheetTab||'';document.getElementById('sh-wh').value=C.sheetWebhook||'';sync().then(()=>setInterval(sync,30000));}
+if(C.pseudo)document.getElementById('cfg-pseudo').value=C.pseudo;
+</script>
+</body>
+</html>
