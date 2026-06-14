@@ -363,6 +363,11 @@ renderSB();if(curRes)renderMain();
 }
 function setOn(o){document.getElementById('sd').className='sync-dot'+(o?' online':'');if(!o)document.getElementById('sl').textContent='Erreur';document.getElementById('cb').className=o?'hidden':'';}
 async function wh(data){if(!C.sheetWebhook)return;try{await fetch(C.sheetWebhook,{method:'POST',mode:'no-cors',body:JSON.stringify(data)});T('Envoye vers Sheets !');setTimeout(sync,3000);}catch(e){T('Erreur envoi',1);}}
+async function whSync(){if(!C.sheetWebhook)return;try{
+  await fetch(C.sheetWebhook,{method:'POST',mode:'no-cors',body:JSON.stringify({type:'sync_persos',data:persos})});
+  await fetch(C.sheetWebhook,{method:'POST',mode:'no-cors',body:JSON.stringify({type:'sync_achats',data:achats})});
+  await fetch(C.sheetWebhook,{method:'POST',mode:'no-cors',body:JSON.stringify({type:'sync_ventes',data:ventes})});
+}catch(e){}}
 function I(v){return parseInt(v)||null}
 
 // ═══ SIDEBAR ═══
@@ -694,7 +699,7 @@ function submitAchat(){
   const price=I(document.getElementById('ac-price').value);
   if(!qty||!price){T('Remplis tout !',1);return;}
   achats.push({date:new Date().toISOString().split('T')[0],perso,resource:res,lotSize:lot,qty,pricePerLot:price,total:qty*price});
-  sA();closeM('achat-m');
+  sA();whSync();closeM('achat-m');
   ['ac-qty','ac-price'].forEach(x=>document.getElementById(x).value='');
   document.getElementById('ac-total').value='';
   T('Achat enregistre ! -'+F(qty*price)+' kamas');renderAchats();
@@ -717,7 +722,7 @@ function submitVente(){
   const price=I(document.getElementById('ve-price').value);
   if(!qty||!price){T('Remplis tout !',1);return;}
   ventes.push({date:new Date().toISOString().split('T')[0],perso,resource:res,lotSize:lot,qty,pricePerLot:price,soldQty:0});
-  sV();closeM('vente-m');
+  sV();whSync();closeM('vente-m');
   ['ve-qty','ve-price'].forEach(x=>document.getElementById(x).value='');
   T(res+' mis en vente !');renderVentes();
 }
@@ -740,7 +745,7 @@ function submitSell(){
   v.earned+=revenue;
   if(!v.salesLog)v.salesLog=[];
   v.salesLog.push({date:new Date().toISOString().split('T')[0],qty,price:v.pricePerLot,total:revenue});
-  sV();closeM('sell-m');
+  sV();whSync();closeM('sell-m');
   T(qty+' lots vendus a '+F(v.pricePerLot)+'/lot ! +'+F(revenue)+' kamas');renderVentes();
 }
 let editVIdx=-1;
@@ -754,9 +759,9 @@ function saveEditVente(){
   const price=I(document.getElementById('editv-price').value);
   if(!price||price<1){T('Entre un prix !',1);return;}
   ventes[editVIdx].pricePerLot=price;
-  sV();closeM('editv-m');T('Prix mis a jour !');renderVentes();
+  sV();whSync();closeM('editv-m');T('Prix mis a jour !');renderVentes();
 }
-function delVente(i){if(!confirm('Supprimer cette vente ?'))return;ventes.splice(i,1);sV();T('Supprime');renderVentes();}
+function delVente(i){if(!confirm('Supprimer cette vente ?'))return;ventes.splice(i,1);sV();whSync();T('Supprime');renderVentes();}
 
 function submitRes(){
   const name=document.getElementById('rm-name').value.trim(),cat=document.getElementById('rm-cat').value;
@@ -773,11 +778,11 @@ function submitRes(){
 function submitPerso(){
   const name=document.getElementById('pm-name').value.trim(),k=parseInt(document.getElementById('pm-kamas').value)||0;
   if(!name){T('Nom !',1);return;}if(persos.find(p=>p.name===name)){T('Existe !',1);return;}
-  persos.push({name,startKamas:k,created:new Date().toISOString().split('T')[0]});sPe();
+  persos.push({name,startKamas:k,created:new Date().toISOString().split('T')[0]});sPe();whSync();
   closeM('perso-m');document.getElementById('pm-name').value='';document.getElementById('pm-kamas').value='';
   T(name+' cree !');renderStats();
 }
-function delPerso(n){if(!confirm('Supprimer '+n+' ?'))return;persos=persos.filter(p=>p.name!==n);achats=achats.filter(a=>a.perso!==n);ventes=ventes.filter(v=>v.perso!==n);sPe();sA();sV();T('Supprime');renderStats();}
+function delPerso(n){if(!confirm('Supprimer '+n+' ?'))return;persos=persos.filter(p=>p.name!==n);achats=achats.filter(a=>a.perso!==n);ventes=ventes.filter(v=>v.perso!==n);sPe();sA();sV();whSync();T('Supprime');renderStats();}
 function openEditRes(){
   if(!curRes)return;
   const r=R.find(x=>x.name===curRes);if(!r)return;
