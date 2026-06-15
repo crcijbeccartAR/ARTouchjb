@@ -391,7 +391,7 @@ renderSB();if(curRes)renderMain();
   }catch(e){setOn(false);}
 }
 function setOn(o){document.getElementById('sd').className='sync-dot'+(o?' online':'');if(!o)document.getElementById('sl').textContent='Erreur';document.getElementById('cb').className=o?'hidden':'';}
-async function wh(data){if(!C.sheetWebhook)return;try{await fetch(C.sheetWebhook,{method:'POST',mode:'no-cors',body:JSON.stringify(data)});T('Envoye vers Sheets !');setTimeout(sync,3000);}catch(e){T('Erreur envoi',1);}}
+async function wh(data){if(!C.sheetWebhook)return;try{await fetch(C.sheetWebhook,{method:'POST',mode:'no-cors',body:JSON.stringify(data)});if(data.type!=='delete'&&data.type!=='delete_price'){T('Envoye vers Sheets !');setTimeout(sync,3000);};}catch(e){T('Erreur envoi',1);}}
 async function whSync(){if(!C.sheetWebhook)return;try{
   await fetch(C.sheetWebhook,{method:'POST',mode:'no-cors',body:JSON.stringify({type:'sync_persos',data:persos})});
   await fetch(C.sheetWebhook,{method:'POST',mode:'no-cors',body:JSON.stringify({type:'sync_achats',data:achats})});
@@ -684,7 +684,7 @@ function delPrix(idx){
   if(entry&&C.sheetWebhook){
     fetch(C.sheetWebhook,{method:'POST',mode:'no-cors',body:JSON.stringify({type:'delete_price',resource:curRes,date:entry.date,hdv1:entry.hdv1,hdv10:entry.hdv10,hdv100:entry.hdv100})});
   }
-  T('Prix supprime');renderMain();renderSB();
+  T('Supprime du site et du Sheet');renderMain();renderSB();
 }
 function openPrix(){
   fillResSelect('px-res');
@@ -894,7 +894,12 @@ function saveEditRes(){
   r.subcat=subs.length?document.getElementById('em-subcat').value:'';
   sR();closeM('edit-m');renderSB();renderMain();T('Ressource modifiee !');
 }
-function delRes(){if(!curRes||!confirm('Supprimer ?'))return;wh({type:'delete',resource:curRes});R=R.filter(r=>r.name!==curRes);delete P[curRes];sR();sP();curRes=null;document.getElementById('main').innerHTML='<div class="empty"><p>Supprime.</p></div>';renderSB();}
+function delRes(){if(!curRes||!confirm('Supprimer ?'))return;
+  var name=curRes;
+  if(C.sheetWebhook){fetch(C.sheetWebhook,{method:'POST',mode:'no-cors',body:JSON.stringify({type:'delete',resource:name})});}
+  R=R.filter(r=>r.name!==name);delete P[name];sR();sP();curRes=null;
+  document.getElementById('main').innerHTML='<div class="empty"><p>Supprime.</p></div>';renderSB();T('Supprime du site et du Sheet');
+}
 
 function saveSh(){C.sheetId=document.getElementById('sh-id').value.trim();C.sheetKey=document.getElementById('sh-key').value.trim();C.sheetTab=document.getElementById('sh-tab').value.trim()||'Feuille1';C.sheetWebhook=document.getElementById('sh-wh').value.trim();localStorage.setItem('artouchjb-cfg',JSON.stringify(C));closeM('sheets-m');T('Connexion...');sync().then(()=>{if(document.getElementById('sd').classList.contains('online'))setInterval(sync,30000);});}
 function saveCfg(){C.pseudo=document.getElementById('cfg-pseudo').value.trim();C.tax=parseFloat(document.getElementById('cfg-tax').value)||2;localStorage.setItem('artouchjb-cfg',JSON.stringify(C));closeM('cfg-m');T('OK !');}
