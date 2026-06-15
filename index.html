@@ -307,7 +307,7 @@ let persos=JSON.parse(localStorage.getItem('artouchjb-persos')||'[]');
 let achats=JSON.parse(localStorage.getItem('artouchjb-achats')||'[]');
 let ventes=JSON.parse(localStorage.getItem('artouchjb-ventes')||'[]');
 let curRes=null,chart=null,cRange=30;
-let _deletedRes={};// blacklist deleted resources for 60s
+let _deletedRes=JSON.parse(localStorage.getItem('artouchjb-deleted')||'{}');
 let crafts=JSON.parse(localStorage.getItem('artouchjb-crafts')||'[]');
 function sC(){localStorage.setItem('artouchjb-crafts',JSON.stringify(crafts));}
 const CATS=['Alchimistes','Animaux','Bijoutiers','Bouchers & chasseurs','Boulangers','Bricoleurs','Bucherons','Cordonniers','Documents','Dofus & Trophees','Fee d\'artifice','Figurines','Forgerons','Milice','Mineurs','Objets d\'Apparats','Paysans','Pierres d\'ames','Poissonniers & pecheurs','Ressources','Runes','Sculpteurs','Tailleurs'];
@@ -899,7 +899,7 @@ function saveEditRes(){
 }
 function delRes(){if(!curRes||!confirm('Supprimer ?'))return;
   var name=curRes;
-  _deletedRes[name]=Date.now();
+  _deletedRes[name]=Date.now();localStorage.setItem('artouchjb-deleted',JSON.stringify(_deletedRes));
   if(C.sheetWebhook){fetch(C.sheetWebhook,{method:'POST',mode:'no-cors',body:JSON.stringify({type:'delete',resource:name})});}
   R=R.filter(r=>r.name!==name);delete P[name];sR();sP();curRes=null;
   document.getElementById('main').innerHTML='<div class="empty"><p>Supprime.</p></div>';renderSB();T('Supprime du site et du Sheet');
