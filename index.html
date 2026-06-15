@@ -307,6 +307,7 @@ let persos=JSON.parse(localStorage.getItem('artouchjb-persos')||'[]');
 let achats=JSON.parse(localStorage.getItem('artouchjb-achats')||'[]');
 let ventes=JSON.parse(localStorage.getItem('artouchjb-ventes')||'[]');
 let curRes=null,chart=null,cRange=30;
+let _deletedRes={};// blacklist deleted resources for 60s
 let crafts=JSON.parse(localStorage.getItem('artouchjb-crafts')||'[]');
 function sC(){localStorage.setItem('artouchjb-crafts',JSON.stringify(crafts));}
 const CATS=['Alchimistes','Animaux','Bijoutiers','Bouchers & chasseurs','Boulangers','Bricoleurs','Bucherons','Cordonniers','Documents','Dofus & Trophees','Fee d\'artifice','Figurines','Forgerons','Milice','Mineurs','Objets d\'Apparats','Paysans','Pierres d\'ames','Poissonniers & pecheurs','Ressources','Runes','Sculpteurs','Tailleurs'];
@@ -368,7 +369,8 @@ async function sync(){
     rows.forEach(r=>{const[dt,nm]=[r[0]||'',r[1]||''];if(!dt||!nm)return;if(!sp[nm])sp[nm]=[];
       sp[nm].push({date:dt,hdv1:I(r[2]),hdv10:I(r[3]),hdv100:I(r[4]),achat:I(r[5]),vente1:I(r[6]),vente10:I(r[7]),vente100:I(r[8]),sold:r[9]||'non',author:r[10]||''});
     });
-    Object.keys(sp).forEach(k=>{sp[k].sort((a,b)=>a.date.localeCompare(b.date));P[k]=sp[k];
+    Object.keys(sp).forEach(k=>{sp[k].sort((a,b)=>a.date.localeCompare(b.date));if(!_deletedRes[k]||(Date.now()-_deletedRes[k])>=60000){P[k]=sp[k];}
+      if(_deletedRes[k]&&(Date.now()-_deletedRes[k])<60000)return;
       if(!R.find(r=>r.name===k)){
         let foundCat='Ressources',foundSub='Autre';
         const nl=k.toLowerCase();
@@ -896,6 +898,7 @@ function saveEditRes(){
 }
 function delRes(){if(!curRes||!confirm('Supprimer ?'))return;
   var name=curRes;
+  _deletedRes[name]=Date.now();
   if(C.sheetWebhook){fetch(C.sheetWebhook,{method:'POST',mode:'no-cors',body:JSON.stringify({type:'delete',resource:name})});}
   R=R.filter(r=>r.name!==name);delete P[name];sR();sP();curRes=null;
   document.getElementById('main').innerHTML='<div class="empty"><p>Supprime.</p></div>';renderSB();T('Supprime du site et du Sheet');
