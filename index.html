@@ -684,10 +684,19 @@ function delPrix(idx){
   var entry=P[curRes][idx];
   P[curRes].splice(idx,1);
   sP();
+  _deletedRes[curRes+'_'+idx]=Date.now();
+  localStorage.setItem('artouchjb-deleted',JSON.stringify(_deletedRes));
   if(entry&&C.sheetWebhook){
-    fetch(C.sheetWebhook,{method:'POST',mode:'no-cors',body:JSON.stringify({type:'delete_price',resource:curRes,date:entry.date,hdv1:String(entry.hdv1||''),hdv10:String(entry.hdv10||''),hdv100:String(entry.hdv100||'')})});
+    fetch(C.sheetWebhook,{method:'POST',mode:'no-cors',body:JSON.stringify({
+      type:'delete_one',
+      resource:curRes,
+      hdv1:entry.hdv1||'',
+      hdv10:entry.hdv10||'',
+      hdv100:entry.hdv100||'',
+      date:entry.date||''
+    })});
   }
-  T('Supprime du site et du Sheet');renderMain();renderSB();
+  T('Supprime !');renderMain();renderSB();
 }
 function openPrix(){
   fillResSelect('px-res');
