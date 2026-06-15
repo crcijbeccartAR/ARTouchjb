@@ -489,12 +489,10 @@ function renderMain(){
 function drawChart(pts){
   const ctx=document.getElementById('cc');if(!ctx)return;if(chart)chart.destroy();
   const lh=[...pts].reverse().find(p=>p.hdv1)?.hdv1;
-  chart=new Chart(ctx,{type:'line',data:{labels:pts.map(p=>D(p.date)),datasets:[
-    {label:'x1',data:pts.map(p=>p.hdv1||null),borderColor:'#d4a853',backgroundColor:'rgba(212,168,83,.06)',borderWidth:2,fill:true,tension:.4,pointRadius:3,pointBackgroundColor:'#d4a853',spanGaps:true},
-    {label:'x10/u',data:pts.map(p=>p.hdv10?Math.round(p.hdv10/10):null),borderColor:'#8a7e6a',borderWidth:1.5,borderDash:[4,3],pointRadius:2,spanGaps:true,fill:false,tension:.4},
-    {label:'x100/u',data:pts.map(p=>p.hdv100?Math.round(p.hdv100/100):null),borderColor:'#5a5245',borderWidth:1.5,borderDash:[2,3],pointRadius:2,spanGaps:true,fill:false,tension:.4},
-    {label:'+10%',data:lh?pts.map(()=>Math.round(lh*1.1)):[],borderColor:'rgba(212,90,74,.35)',borderWidth:1,borderDash:[6,4],pointRadius:0,fill:false}
-  ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{labels:{color:'#8a7e6a',font:{size:11},boxWidth:12}},tooltip:{backgroundColor:'#1a1815',borderColor:'#332e27',borderWidth:1,titleColor:'#e8e0d0',bodyColor:'#8a7e6a',callbacks:{label:c=>c.raw!=null?` ${F(c.raw)} kamas`:' --'}}},scales:{x:{grid:{color:'rgba(51,46,39,.6)'},ticks:{color:'#8a7e6a',font:{size:10},maxTicksLimit:10}},y:{grid:{color:'rgba(51,46,39,.6)'},ticks:{color:'#8a7e6a',font:{size:10},callback:v=>F(v)}}}}});
+  chart=new Chart(ctx,{type:'line',data:{labels:pts.map(p=>D(p.date)+(p.time?' '+p.time:'')),datasets:[
+    {label:'Prix x1',data:pts.map(p=>p.hdv1||null),borderColor:'#d4a853',backgroundColor:'rgba(212,168,83,.08)',borderWidth:2.5,fill:true,tension:.3,pointRadius:4,pointBackgroundColor:'#d4a853',pointBorderColor:'#1a1815',pointBorderWidth:2,spanGaps:true},
+    {label:'Seuil +10%',data:lh?pts.map(()=>Math.round(lh*1.1)):[],borderColor:'rgba(212,90,74,.3)',borderWidth:1.5,borderDash:[8,4],pointRadius:0,fill:false}
+  ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a1815',borderColor:'#443d33',borderWidth:1,titleColor:'#e8e0d0',bodyColor:'#d4a853',bodyFont:{size:13,weight:'600'},padding:12,displayColors:false,callbacks:{label:c=>c.raw!=null?F(c.raw)+' kamas':''}}},scales:{x:{grid:{display:false},ticks:{color:'#5a5245',font:{size:10},maxTicksLimit:8}},y:{grid:{color:'rgba(51,46,39,.3)',drawBorder:false},ticks:{color:'#5a5245',font:{size:10},callback:v=>F(v)}}}}});
 }
 
 // ═══ ACHATS VIEW ═══
@@ -585,18 +583,25 @@ function renderStats(){
     ${persos.length?'<div class="pg">'+persos.map(p=>{
       const pa=achats.filter(a=>a.perso===p.name);
       const pv=ventes.filter(v=>v.perso===p.name);
-      const spent=pa.reduce((s,a)=>s+a.total,0);
-      const earned=pv.reduce((s,v)=>s+(getEarned(v)),0);
+      const earnedBrut=pv.reduce((s,v)=>s+getEarned(v),0);
+      const tax=Math.round(earnedBrut*getTax());
+      const earned=earnedBrut-tax;
+      const invValue=getInventoryValue(p.name);
       const bal=p.startKamas-spent+earned;
-      const profit=earned-spent;
-      const roi=spent>0?Math.round((profit/spent)*100):0;
+      const totalVal=bal+invValue;
+      const profit=totalVal-p.startKamas;
+      const roi=p.startKamas>0?Math.round((profit/p.startKamas)*100):0;
       return `<div class="pc ${window._selPerso===p.name?'on':''}" onclick="selPerso('${esc(p.name)}')"><div class="pn">${p.name}</div>
         <div class="ps"><span class="pl">Capital de depart</span><span class="pv">${F(p.startKamas)}</span></div>
         <div class="ps"><span class="pl">Total depense</span><span class="pv loss">-${F(spent)}</span></div>
-        <div class="ps"><span class="pl">Revenus</span><span class="pv profit">+${F(earned)}</span></div>
-        <div class="ps" style="border-bottom:2px solid var(--border);padding-bottom:6px"><span class="pl">ROI</span><span class="pv ${roi>=0?'profit':'loss'}">${roi>=0?'+':''}${roi}%</span></div>
-        <div class="ps" style="padding-top:6px"><span class="pl" style="font-weight:600">Solde actuel</span><span class="pv" style="font-size:1.05rem;color:var(--al)">${F(bal)}</span></div>
-        <div class="ps"><span class="pl" style="font-weight:600">Benefice net</span><span class="pv ${profit>=0?'profit':'loss'}" style="font-size:1.05rem">${profit>=0?'+':''}${F(profit)}</span></div>
+        <div class="ps"><span class="pl">Revenus bruts</span><span class="pv profit">+${F(earnedBrut)}</span></div>
+        <div class="ps"><span class="pl">Taxe HDV (${C.tax||2}%)</span><span class="pv loss">-${F(tax)}</span></div>
+        <div class="ps" style="border-bottom:2px solid var(--border);padding-bottom:6px"><span class="pl">Revenus nets</span><span class="pv profit">+${F(earned)}</span></div>
+        <div class="ps" style="padding-top:6px"><span class="pl" style="font-weight:600">Solde kamas</span><span class="pv" style="font-size:1.05rem">${F(bal)}</span></div>
+        <div class="ps"><span class="pl" style="font-weight:600">Inventaire en vente</span><span class="pv" style="color:var(--gold)">${F(invValue)}</span></div>
+        <div class="ps" style="border-top:2px solid var(--border);padding-top:6px"><span class="pl" style="font-weight:600">Valeur totale</span><span class="pv" style="font-size:1.1rem;color:var(--gold-l)">${F(totalVal)}</span></div>
+        <div class="ps"><span class="pl" style="font-weight:600">Benefice reel</span><span class="pv ${profit>=0?'profit':'loss'}" style="font-size:1.1rem">${profit>=0?'+':''}${F(profit)}</span></div>
+        <div class="ps"><span class="pl">ROI</span><span class="pv ${roi>=0?'profit':'loss'}">${roi>=0?'+':''}${roi}%</span></div>
       </div>`;
     }).join('')+'</div><div id="perso-detail"></div>':'<div class="empty"><p>Aucun perso pour le moment.<br>Cree un perso avec un capital de depart pour commencer a suivre tes investissements.</p></div>'}`;
   if(window._selPerso)renderPersoDetail();
@@ -673,9 +678,13 @@ function renderPersoDetail(){
 function delPrix(idx){
   if(!confirm('Supprimer ce prix ?'))return;
   if(!P[curRes])return;
+  var entry=P[curRes][idx];
   P[curRes].splice(idx,1);
-  sP();T('Prix supprime');
-  renderMain();renderSB();
+  sP();
+  if(entry&&C.sheetWebhook){
+    fetch(C.sheetWebhook,{method:'POST',mode:'no-cors',body:JSON.stringify({type:'delete_price',resource:curRes,date:entry.date,hdv1:entry.hdv1,hdv10:entry.hdv10,hdv100:entry.hdv100})});
+  }
+  T('Prix supprime');renderMain();renderSB();
 }
 function openPrix(){
   fillResSelect('px-res');
