@@ -369,8 +369,9 @@ async function sync(){
     rows.forEach(r=>{const[dt,nm]=[r[0]||'',r[1]||''];if(!dt||!nm)return;if(!sp[nm])sp[nm]=[];
       sp[nm].push({date:dt,hdv1:I(r[2]),hdv10:I(r[3]),hdv100:I(r[4]),achat:I(r[5]),vente1:I(r[6]),vente10:I(r[7]),vente100:I(r[8]),sold:r[9]||'non',author:r[10]||''});
     });
-    Object.keys(sp).forEach(k=>{sp[k].sort((a,b)=>a.date.localeCompare(b.date));if(!_deletedRes[k]||(Date.now()-_deletedRes[k])>=60000){P[k]=sp[k];}
-      if(_deletedRes[k]&&(Date.now()-_deletedRes[k])<60000)return;
+    Object.keys(sp).forEach(k=>{
+      if(_deletedRes[k]&&(Date.now()-_deletedRes[k])<120000)return;
+      sp[k].sort((a,b)=>a.date.localeCompare(b.date));P[k]=sp[k];
       if(!R.find(r=>r.name===k)){
         let foundCat='Ressources',foundSub='Autre';
         const nl=k.toLowerCase();
@@ -904,7 +905,7 @@ function delRes(){if(!curRes||!confirm('Supprimer ?'))return;
   document.getElementById('main').innerHTML='<div class="empty"><p>Supprime.</p></div>';renderSB();T('Supprime du site et du Sheet');
 }
 
-function saveSh(){C.sheetId=document.getElementById('sh-id').value.trim();C.sheetKey=document.getElementById('sh-key').value.trim();C.sheetTab=document.getElementById('sh-tab').value.trim()||'Feuille1';C.sheetWebhook=document.getElementById('sh-wh').value.trim();localStorage.setItem('artouchjb-cfg',JSON.stringify(C));closeM('sheets-m');T('Connexion...');sync().then(()=>{if(document.getElementById('sd').classList.contains('online'))setInterval(sync,30000);});}
+function saveSh(){C.sheetId=document.getElementById('sh-id').value.trim();C.sheetKey=document.getElementById('sh-key').value.trim();C.sheetTab=document.getElementById('sh-tab').value.trim()||'Feuille1';C.sheetWebhook=document.getElementById('sh-wh').value.trim();localStorage.setItem('artouchjb-cfg',JSON.stringify(C));closeM('sheets-m');T('Connexion...');sync().then(()=>{if(document.getElementById('sd').classList.contains('online'))setInterval(sync,60000);});}
 function saveCfg(){C.pseudo=document.getElementById('cfg-pseudo').value.trim();C.tax=parseFloat(document.getElementById('cfg-tax').value)||2;localStorage.setItem('artouchjb-cfg',JSON.stringify(C));closeM('cfg-m');T('OK !');}
 function renderCraft(){
   const d=document.getElementById('v-craft');
@@ -1001,7 +1002,7 @@ function T(m,e){const t=document.getElementById('toast');t.textContent=m;t.class
 
 // ═══ INIT ═══
 renderSB();
-if(C.sheetId&&C.sheetKey){document.getElementById('sh-id').value=C.sheetId;document.getElementById('sh-key').value=C.sheetKey;document.getElementById('sh-tab').value=C.sheetTab||'';document.getElementById('sh-wh').value=C.sheetWebhook||'';sync().then(()=>setInterval(sync,30000));}
+if(C.sheetId&&C.sheetKey){document.getElementById('sh-id').value=C.sheetId;document.getElementById('sh-key').value=C.sheetKey;document.getElementById('sh-tab').value=C.sheetTab||'';document.getElementById('sh-wh').value=C.sheetWebhook||'';sync().then(()=>setInterval(sync,60000));}
 if(C.pseudo)document.getElementById('cfg-pseudo').value=C.pseudo;
 document.getElementById('cfg-tax').value=C.tax||2;
 </script>
