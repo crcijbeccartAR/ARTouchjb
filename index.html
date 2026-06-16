@@ -960,7 +960,7 @@ function renderCraft(){
     </div>
     ${crafts.length?crafts.map((c,i)=>{
       let totalCost=0;let missing=false;
-      var bestSell=getBestSellPrice(c.name);
+      var bestSell=getBestSellPrice(c.itemRes||c.name);
       var sellPrice=bestSell?bestSell.pu:null;
       var sellLot=bestSell?bestSell.lot:'';
       const ingDetails=c.ingredients.map(ing=>{
@@ -1021,7 +1021,7 @@ function addIngredient(){
 }
 function submitCraft(){
   const name=document.getElementById('cr-name').value.trim();
-  const sell=null;// auto from prix du jour
+  const itemRes=document.getElementById('cr-item').value;
   if(!name){T('Entre un nom !',1);return;}
   const ingredients=[];
   document.querySelectorAll('#cr-ingredients .fr').forEach(row=>{
@@ -1030,7 +1030,7 @@ function submitCraft(){
     if(res&&qty>0)ingredients.push({resource:res,qty});
   });
   if(!ingredients.length){T('Ajoute des ingredients !',1);return;}
-  crafts.push({name,sellPrice:sell,ingredients});
+  crafts.push({name,itemRes:itemRes,ingredients});
   sC();closeM('craft-m');T(name+' ajoutee !');renderCraft();
 }
 function delCraft(i){if(!confirm('Supprimer cette recette ?'))return;crafts.splice(i,1);sC();T('Recette supprimee');renderCraft();}
