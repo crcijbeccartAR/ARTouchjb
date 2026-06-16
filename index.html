@@ -209,7 +209,7 @@
 
 <!-- MODALS -->
 <div class="overlay" id="prix-m"><div class="modal"><h2>Prix du jour</h2>
-  <div class="field ac-wrap"><label>Ressource</label><input type="text" id="px-res" placeholder="Rechercher une ressource..." autocomplete="off"></div>
+  <div class="field"><label>Ressource</label><select id="px-res"></select></div>
   <div class="fr3">
     <div class="field"><label>x1</label><input type="number" id="px-1" min="0"></div>
     <div class="field"><label>x10</label><input type="number" id="px-10" min="0"></div>
@@ -220,7 +220,7 @@
 
 <div class="overlay" id="achat-m"><div class="modal"><h2>Nouvel achat</h2>
   <div class="field"><label>Perso</label><select id="ac-perso"></select></div>
-  <div class="field ac-wrap"><label>Ressource</label><input type="text" id="ac-res" placeholder="Rechercher une ressource..." autocomplete="off"></div>
+  <div class="field"><label>Ressource</label><select id="ac-res"></select></div>
   <div id="ac-preview" style="margin-bottom:12px"></div>
   <div class="fr3">
     <div class="field"><label>Taille du lot</label><select id="ac-lot"><option value="1">x1</option><option value="10">x10</option><option value="100">x100</option></select></div>
@@ -233,7 +233,7 @@
 
 <div class="overlay" id="vente-m"><div class="modal"><h2>Mettre en vente</h2>
   <div class="field"><label>Perso</label><select id="ve-perso"></select></div>
-  <div class="field ac-wrap"><label>Ressource</label><input type="text" id="ve-res" placeholder="Rechercher une ressource..." autocomplete="off"></div>
+  <div class="field"><label>Ressource</label><select id="ve-res"></select></div>
   <div id="ve-preview" style="margin-bottom:12px"></div>
   <div class="fr3">
     <div class="field"><label>Taille du lot</label><select id="ve-lot"><option value="1">x1</option><option value="10">x10</option><option value="100">x100</option></select></div>
@@ -283,7 +283,7 @@
 
 <div class="overlay" id="craft-m"><div class="modal" style="width:500px"><h2>Nouvelle recette</h2>
   <div class="field"><label>Nom de l'item a crafter</label><input type="text" id="cr-name" placeholder="ex: Amulette du Bouftou"></div>
-  <div class="field ac-wrap"><label>Item crafté (doit avoir un prix du jour)</label><input type="text" id="cr-item" placeholder="Rechercher..." autocomplete="off"></div>
+  <div class="field"><label>Item crafté (doit avoir un prix du jour)</label><select id="cr-item"></select></div>
   <div class="sl">Ingredients</div>
   <div id="cr-ingredients"></div>
   <button class="btn btn-outline btn-sm" style="width:100%;margin:8px 0" onclick="addIngredient()">+ Ajouter un ingredient</button>
@@ -796,7 +796,7 @@ function fillResSelect(id){document.getElementById(id).innerHTML=R.map(r=>`<opti
 function openAchat(){
   if(!persos.length){T('Cree un perso d\'abord !',1);go('stats');return;}
   fillPersoSelect('ac-perso');fillResSelect('ac-res');
-  document.getElementById('ac-res').oninput=document.getElementById('ac-res').onchange=()=>{autoFillPrice('ac-res','ac-lot','ac-price');renderPricePreview(document.getElementById('ac-res').value,'ac-preview','achat');};
+  document.getElementById('ac-res').onchange=()=>{autoFillPrice('ac-res','ac-lot','ac-price');renderPricePreview(document.getElementById('ac-res').value,'ac-preview','achat');};
   document.getElementById('ac-lot').onchange=()=>autoFillPrice('ac-res','ac-lot','ac-price');
   const updateTotal=()=>{const q=I(document.getElementById('ac-qty').value)||0,p=I(document.getElementById('ac-price').value)||0;document.getElementById('ac-total').value=F(q*p)+' kamas';};
   document.getElementById('ac-qty').oninput=document.getElementById('ac-price').oninput=updateTotal;
@@ -821,7 +821,7 @@ function submitAchat(){
 function openVente(){
   if(!persos.length){T('Cree un perso d\'abord !',1);go('stats');return;}
   fillPersoSelect('ve-perso');fillResSelect('ve-res');
-  document.getElementById('ve-res').oninput=document.getElementById('ve-res').onchange=()=>{autoFillPrice('ve-res','ve-lot','ve-price');renderPricePreview(document.getElementById('ve-res').value,'ve-preview','vente');};
+  document.getElementById('ve-res').onchange=()=>{autoFillPrice('ve-res','ve-lot','ve-price');renderPricePreview(document.getElementById('ve-res').value,'ve-preview','vente');};
   document.getElementById('ve-lot').onchange=()=>autoFillPrice('ve-res','ve-lot','ve-price');
   autoFillPrice('ve-res','ve-lot','ve-price');
   renderPricePreview(document.getElementById('ve-res').value,'ve-preview','vente');
@@ -1002,6 +1002,7 @@ let ingCount=0;
 function openCraft(){
   document.getElementById('cr-name').value='';
   fillResSelect('cr-item');
+  document.getElementById('cr-item').value='';
   document.getElementById('cr-ingredients').innerHTML='';
   ingCount=0;
   addIngredient();addIngredient();
