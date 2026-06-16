@@ -682,21 +682,18 @@ function delPrix(idx){
   if(!confirm('Supprimer ce prix ?'))return;
   if(!P[curRes])return;
   var entry=P[curRes][idx];
+  var hasData=entry&&(entry.hdv1||entry.hdv10||entry.hdv100);
   P[curRes].splice(idx,1);
   sP();
-  _deletedRes[curRes+'_'+idx]=Date.now();
-  localStorage.setItem('artouchjb-deleted',JSON.stringify(_deletedRes));
-  if(entry&&C.sheetWebhook){
-    fetch(C.sheetWebhook,{method:'POST',mode:'no-cors',body:JSON.stringify({
-      type:'delete_one',
-      resource:curRes,
-      hdv1:entry.hdv1||'',
-      hdv10:entry.hdv10||'',
-      hdv100:entry.hdv100||'',
-      date:entry.date||''
-    })});
+  if(hasData&&C.sheetWebhook){
+    var payload={type:'delete_one',resource:curRes,hdv1:Number(entry.hdv1)||0,hdv10:Number(entry.hdv10)||0,hdv100:Number(entry.hdv100)||0};
+    console.log('DELETE envoi:',JSON.stringify(payload));
+    fetch(C.sheetWebhook,{method:'POST',mode:'no-cors',body:JSON.stringify(payload)});
+    T('Supprime du site et du Sheet');
+  } else {
+    T('Supprime localement');
   }
-  T('Supprime !');renderMain();renderSB();
+  renderMain();renderSB();
 }
 function openPrix(){
   fillResSelect('px-res');
