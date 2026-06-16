@@ -172,6 +172,7 @@
   <button onclick="go('ventes')">Ventes</button>
   <button onclick="go('stats')">Statistiques</button>
   <button onclick="go('craft')">Craft</button>
+  <button onclick="go('tendances')">Tendances</button>
 </div>
 
 <!-- PRIX -->
@@ -195,6 +196,9 @@
 
 <!-- CRAFT -->
 <div class="wrap" id="v-craft" style="display:none"></div>
+
+<!-- TENDANCES -->
+<div class="wrap" id="v-tendances" style="display:none"></div>
 
 <!-- MODALS -->
 <div class="overlay" id="prix-m"><div class="modal"><h2>Prix du jour</h2>
@@ -348,13 +352,14 @@ function sV(){localStorage.setItem('artouchjb-ventes',JSON.stringify(ventes))}
 let view='prix';
 function go(v){
   view=v;
-  document.querySelectorAll('.nav button').forEach((b,i)=>b.className=['prix','achats','ventes','stats','craft'][i]===v?'on':'');
-  ['prix','achats','ventes','stats','craft'].forEach(x=>{const el=document.getElementById('v-'+x);if(el)el.style.display=x===v?'':'none';});
+  document.querySelectorAll('.nav button').forEach((b,i)=>b.className=['prix','achats','ventes','stats','craft','tendances'][i]===v?'on':'');
+  ['prix','achats','ventes','stats','craft','tendances'].forEach(x=>{const el=document.getElementById('v-'+x);if(el)el.style.display=x===v?'':'none';});
   if(v==='prix'){document.getElementById('v-prix').style.display='grid';}
   if(v==='achats')renderAchats();
   if(v==='ventes')renderVentes();
   if(v==='stats')renderStats();
   if(v==='craft')renderCraft();
+  if(v==='tendances')renderTendances();
 }
 
 // ═══ SHEETS ═══
@@ -404,6 +409,17 @@ function I(v){return parseInt(v)||null}
 function getTax(){return (C.tax||2)/100;}
 function getEarned(v){return v.earned||(v.soldQty*v.pricePerLot)||0;}
 function getEarnedAfterTax(v){return Math.round(getEarned(v)*(1-getTax()));}
+function getBestUnitPrice(resName){
+  var pts=P[resName]||[];if(!pts.length)return null;
+  var last=pts[pts.length-1];
+  var options=[];
+  if(last.hdv1)options.push({lot:'x1',pu:last.hdv1});
+  if(last.hdv10)options.push({lot:'x10',pu:Math.round(last.hdv10/10)});
+  if(last.hdv100)options.push({lot:'x100',pu:Math.round(last.hdv100/100)});
+  if(!options.length)return null;
+  options.sort(function(a,b){return a.pu-b.pu;});
+  return options[0];
+}
 function getInventoryValue(persoName){
   const pv=ventes.filter(v=>v.perso===persoName);
   let val=0;
@@ -434,14 +450,16 @@ function renderSB(){
         html+=`<div class="subcat-toggle" onclick="toggleSub('${esc(key)}')"><span class="arrow ${isOpen?'open':''}">&#9654;</span>${sc} (${subs[sc].length})</div>`;
         html+=`<div class="subcat-items ${isOpen?'open':''}">${subs[sc].map(r=>{
           const t=trend(P[r.name]||[]);
-          return `<div class="ri ${curRes===r.name?'on':''}" onclick="selRes('${esc(r.name)}')"><span class="rn">${r.name}</span>${t!==null?`<span class="tr ${t>=10?'up':t<=-5?'down':'flat'}">${t>0?'+':''}${t}%</span>`:''}</div>`;
+          var ld=(P[r.name]&&P[r.name].length)?P[r.name][P[r.name].length-1].date:'';
+      return `<div class="ri ${curRes===r.name?'on':''}" onclick="selRes('${esc(r.name)}')"><span class="rn">${r.name}</span><span style="font-size:.58rem;color:var(--dim2);margin-left:4px">${ld?D(ld):''}</span>${t!==null?`<span class="tr ${t>=10?'up':t<=-5?'down':'flat'}" style="margin-left:4px">${t>0?'+':''}${t}%</span>`:''}</div>`;
         }).join('')}</div>`;
       });
     } else {
       html+=`<div class="cat-label">${c}</div>`;
       html+=items.map(r=>{
         const t=trend(P[r.name]||[]);
-        return `<div class="ri ${curRes===r.name?'on':''}" onclick="selRes('${esc(r.name)}')"><span class="rn">${r.name}</span>${t!==null?`<span class="tr ${t>=10?'up':t<=-5?'down':'flat'}">${t>0?'+':''}${t}%</span>`:''}</div>`;
+        var ld=(P[r.name]&&P[r.name].length)?P[r.name][P[r.name].length-1].date:'';
+      return `<div class="ri ${curRes===r.name?'on':''}" onclick="selRes('${esc(r.name)}')"><span class="rn">${r.name}</span><span style="font-size:.58rem;color:var(--dim2);margin-left:4px">${ld?D(ld):''}</span>${t!==null?`<span class="tr ${t>=10?'up':t<=-5?'down':'flat'}" style="margin-left:4px">${t>0?'+':''}${t}%</span>`:''}</div>`;
       }).join('');
     }
   });
@@ -586,6 +604,7 @@ function renderStats(){
     ${persos.length?'<div class="pg">'+persos.map(p=>{
       const pa=achats.filter(a=>a.perso===p.name);
       const pv=ventes.filter(v=>v.perso===p.name);
+      const spent=pa.reduce((s,a)=>s+a.total,0);
       const earnedBrut=pv.reduce((s,v)=>s+getEarned(v),0);
       const tax=Math.round(earnedBrut*getTax());
       const earned=earnedBrut-tax;
@@ -924,12 +943,12 @@ function renderCraft(){
     ${crafts.length?crafts.map((c,i)=>{
       let totalCost=0;let missing=false;
       const ingDetails=c.ingredients.map(ing=>{
-        const pts=P[ing.resource]||[];
-        const lastPrice=pts.length?pts[pts.length-1]:null;
-        const pu=lastPrice?(lastPrice.hdv1||null):null;
+        const best=getBestUnitPrice(ing.resource);
+        const pu=best?best.pu:null;
+        const lot=best?best.lot:'?';
         const cost=pu?pu*ing.qty:null;
         if(cost)totalCost+=cost;else missing=true;
-        return {name:ing.resource,qty:ing.qty,pu,cost};
+        return {name:ing.resource,qty:ing.qty,pu,lot,cost};
       });
       const profit=c.sellPrice?c.sellPrice-totalCost:null;
       const margin=c.sellPrice&&totalCost?Math.round(((c.sellPrice-totalCost)/totalCost)*100):null;
@@ -950,7 +969,7 @@ function renderCraft(){
         ${ingDetails.map(ig=>'<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(42,61,24,.3)">'
           +'<span style="flex:1;font-weight:500">'+ig.name+'</span>'
           +'<span style="font-size:.78rem;color:var(--dim)">x'+ig.qty+'</span>'
-          +'<span style="font-size:.78rem;color:var(--dim)">'+(ig.pu?F(ig.pu)+'/u':'pas de prix')+'</span>'
+          +'<span style="font-size:.78rem;color:var(--dim)">'+(ig.pu?F(ig.pu)+'/u ('+ig.lot+')':'pas de prix')+'</span>'
           +'<span style="font-weight:600;'+(ig.cost?'':'color:var(--red)')+'">'+(ig.cost?F(ig.cost):'?')+'</span>'
         +'</div>').join('')}
       </div>`;
@@ -993,6 +1012,59 @@ function submitCraft(){
   sC();closeM('craft-m');T(name+' ajoutee !');renderCraft();
 }
 function delCraft(i){if(!confirm('Supprimer cette recette ?'))return;crafts.splice(i,1);sC();T('Recette supprimee');renderCraft();}
+
+function renderTendances(){
+  var d=document.getElementById('v-tendances');
+  var trends=[];
+  R.forEach(function(r){
+    var pts=P[r.name]||[];
+    if(pts.length<2)return;
+    var last=pts[pts.length-1],prev=pts[pts.length-2];
+    var l=last.hdv1||0,p=prev.hdv1||0;
+    if(!p)return;
+    var pct=Math.round(((l-p)/p)*100);
+    trends.push({name:r.name,cat:r.cat,last:l,prev:p,pct:pct,date:last.date});
+  });
+  var hausse=trends.filter(function(t){return t.pct>0}).sort(function(a,b){return b.pct-a.pct});
+  var baisse=trends.filter(function(t){return t.pct<0}).sort(function(a,b){return a.pct-b.pct});
+  var stable=trends.filter(function(t){return t.pct===0});
+
+  var html='<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">';
+  html+='<div><h2 style="font-family:Cinzel,serif;font-size:1.1rem;color:var(--gold-l)">Tendances</h2>';
+  html+='<p style="font-size:.75rem;color:var(--dim);margin-top:2px">Ressources qui montent ou descendent par rapport au releve precedent.</p></div></div>';
+
+  if(hausse.length){
+    html+='<div class="card"><div class="card-title" style="color:var(--red)">En hausse</div>';
+    hausse.slice(0,15).forEach(function(t,i){
+      html+='<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">';
+      html+='<span style="font-size:.75rem;color:var(--dim);width:24px">#'+(i+1)+'</span>';
+      html+='<span style="flex:1;font-weight:500">'+t.name+'</span>';
+      html+='<span style="font-size:.75rem;color:var(--dim)">'+F(t.prev)+' → '+F(t.last)+'</span>';
+      html+='<span class="up" style="font-weight:700;min-width:50px;text-align:right">+'+t.pct+'%</span>';
+      html+='</div>';
+    });
+    html+='</div>';
+  }
+
+  if(baisse.length){
+    html+='<div class="card"><div class="card-title" style="color:var(--green)">En baisse</div>';
+    baisse.slice(0,15).forEach(function(t,i){
+      html+='<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">';
+      html+='<span style="font-size:.75rem;color:var(--dim);width:24px">#'+(i+1)+'</span>';
+      html+='<span style="flex:1;font-weight:500">'+t.name+'</span>';
+      html+='<span style="font-size:.75rem;color:var(--dim)">'+F(t.prev)+' → '+F(t.last)+'</span>';
+      html+='<span class="down" style="font-weight:700;min-width:50px;text-align:right">'+t.pct+'%</span>';
+      html+='</div>';
+    });
+    html+='</div>';
+  }
+
+  if(!hausse.length&&!baisse.length){
+    html+='<div class="empty"><p>Pas assez de donnees. Ajoute des prix sur au moins 2 jours pour voir les tendances.</p></div>';
+  }
+
+  d.innerHTML=html;
+}
 
 function exportCSV(){const rows=[['Date','Ressource','x1','x10','x100','Auteur']];Object.entries(P).forEach(([n,pts])=>pts.forEach(p=>rows.push([p.date,n,p.hdv1||'',p.hdv10||'',p.hdv100||'',p.author||''])));const b=new Blob([rows.map(r=>r.join(',')).join('\n')],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='artouchjb.csv';a.click();T('CSV !');}
 
