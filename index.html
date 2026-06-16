@@ -148,6 +148,13 @@
   .divider{border:none;border-top:1px solid var(--border);margin:16px 0}
 
   /* TOAST */
+  .ac-wrap{position:relative}
+  .ac-list{position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border-l);border-radius:0 0 8px 8px;max-height:200px;overflow-y:auto;z-index:50;display:none}
+  .ac-list.open{display:block}
+  .ac-opt{padding:8px 12px;font-size:.82rem;cursor:pointer;transition:background .1s}
+  .ac-opt:hover,.ac-opt.hl{background:var(--s2);color:var(--gold-l)}
+  .ac-opt .ac-cat{font-size:.6rem;color:var(--dim2);margin-left:6px}
+
   #toast{position:fixed;bottom:20px;right:20px;background:var(--surface);border:1px solid var(--border-l);border-left:3px solid var(--green);padding:12px 20px;border-radius:10px;font-size:.82rem;opacity:0;transform:translateY(8px);transition:all .25s;z-index:200;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,.3)}
   #toast.show{opacity:1;transform:translateY(0)}#toast.err{border-left-color:var(--red)}
 
@@ -202,7 +209,7 @@
 
 <!-- MODALS -->
 <div class="overlay" id="prix-m"><div class="modal"><h2>Prix du jour</h2>
-  <div class="field"><label>Ressource</label><input type="text" id="px-res" placeholder="Rechercher une ressource..." autocomplete="off"></div>
+  <div class="field ac-wrap"><label>Ressource</label><input type="text" id="px-res" placeholder="Rechercher une ressource..." autocomplete="off"></div>
   <div class="fr3">
     <div class="field"><label>x1</label><input type="number" id="px-1" min="0"></div>
     <div class="field"><label>x10</label><input type="number" id="px-10" min="0"></div>
@@ -213,7 +220,7 @@
 
 <div class="overlay" id="achat-m"><div class="modal"><h2>Nouvel achat</h2>
   <div class="field"><label>Perso</label><select id="ac-perso"></select></div>
-  <div class="field"><label>Ressource</label><input type="text" id="ac-res" placeholder="Rechercher une ressource..." autocomplete="off"></div>
+  <div class="field ac-wrap"><label>Ressource</label><input type="text" id="ac-res" placeholder="Rechercher une ressource..." autocomplete="off"></div>
   <div id="ac-preview" style="margin-bottom:12px"></div>
   <div class="fr3">
     <div class="field"><label>Taille du lot</label><select id="ac-lot"><option value="1">x1</option><option value="10">x10</option><option value="100">x100</option></select></div>
@@ -226,7 +233,7 @@
 
 <div class="overlay" id="vente-m"><div class="modal"><h2>Mettre en vente</h2>
   <div class="field"><label>Perso</label><select id="ve-perso"></select></div>
-  <div class="field"><label>Ressource</label><input type="text" id="ve-res" placeholder="Rechercher une ressource..." autocomplete="off"></div>
+  <div class="field ac-wrap"><label>Ressource</label><input type="text" id="ve-res" placeholder="Rechercher une ressource..." autocomplete="off"></div>
   <div id="ve-preview" style="margin-bottom:12px"></div>
   <div class="fr3">
     <div class="field"><label>Taille du lot</label><select id="ve-lot"><option value="1">x1</option><option value="10">x10</option><option value="100">x100</option></select></div>
@@ -276,7 +283,7 @@
 
 <div class="overlay" id="craft-m"><div class="modal" style="width:500px"><h2>Nouvelle recette</h2>
   <div class="field"><label>Nom de l'item a crafter</label><input type="text" id="cr-name" placeholder="ex: Amulette du Bouftou"></div>
-  <div class="field"><label>Prix de vente estime</label><input type="number" id="cr-sell" placeholder="ex: 50000" min="0"></div>
+  <div class="field ac-wrap"><label>Item crafté (doit avoir un prix du jour)</label><input type="text" id="cr-item" placeholder="Rechercher..." autocomplete="off"></div>
   <div class="sl">Ingredients</div>
   <div id="cr-ingredients"></div>
   <button class="btn btn-outline btn-sm" style="width:100%;margin:8px 0" onclick="addIngredient()">+ Ajouter un ingredient</button>
@@ -409,6 +416,17 @@ function I(v){return parseInt(v)||null}
 function getTax(){return (C.tax||2)/100;}
 function getEarned(v){return v.earned||(v.soldQty*v.pricePerLot)||0;}
 function getEarnedAfterTax(v){return Math.round(getEarned(v)*(1-getTax()));}
+function getBestSellPrice(resName){
+  var pts=P[resName]||[];if(!pts.length)return null;
+  var last=pts[pts.length-1];
+  var options=[];
+  if(last.hdv1)options.push({lot:'x1',pu:last.hdv1});
+  if(last.hdv10)options.push({lot:'x10',pu:Math.round(last.hdv10/10)});
+  if(last.hdv100)options.push({lot:'x100',pu:Math.round(last.hdv100/100)});
+  if(!options.length)return null;
+  options.sort(function(a,b){return b.pu-a.pu;});
+  return options[0];
+}
 function getBestUnitPrice(resName){
   var pts=P[resName]||[];if(!pts.length)return null;
   var last=pts[pts.length-1];
@@ -942,6 +960,9 @@ function renderCraft(){
     </div>
     ${crafts.length?crafts.map((c,i)=>{
       let totalCost=0;let missing=false;
+      var bestSell=getBestSellPrice(c.name);
+      var sellPrice=bestSell?bestSell.pu:null;
+      var sellLot=bestSell?bestSell.lot:'';
       const ingDetails=c.ingredients.map(ing=>{
         const best=getBestUnitPrice(ing.resource);
         const pu=best?best.pu:null;
@@ -950,8 +971,8 @@ function renderCraft(){
         if(cost)totalCost+=cost;else missing=true;
         return {name:ing.resource,qty:ing.qty,pu,lot,cost};
       });
-      const profit=c.sellPrice?c.sellPrice-totalCost:null;
-      const margin=c.sellPrice&&totalCost?Math.round(((c.sellPrice-totalCost)/totalCost)*100):null;
+      const profit=sellPrice?sellPrice-totalCost:null;
+      const margin=sellPrice&&totalCost?Math.round(((sellPrice-totalCost)/totalCost)*100):null;
       return `<div class="card" style="margin-bottom:14px">
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
           <h3 style="font-family:Cinzel,serif;color:var(--al);font-size:.95rem">${c.name}</h3>
@@ -961,7 +982,7 @@ function renderCraft(){
         </div>
         <div class="stats" style="grid-template-columns:repeat(auto-fill,minmax(140px,1fr));margin-bottom:12px">
           <div class="stat"><div class="lbl">Cout de craft</div><div class="val ${missing?'':'loss'}">${missing?'Prix manquants':F(totalCost)}</div></div>
-          <div class="stat"><div class="lbl">Prix de vente</div><div class="val">${c.sellPrice?F(c.sellPrice):'--'}</div></div>
+          <div class="stat"><div class="lbl">Prix de vente ${sellLot?'('+sellLot+')':''}</div><div class="val">${sellPrice?F(sellPrice):'pas de prix'}</div></div>
           <div class="stat"><div class="lbl">Benefice</div><div class="val ${profit>=0?'profit':'loss'}">${profit!==null?(profit>=0?'+':'')+F(profit):'--'}</div></div>
           <div class="stat"><div class="lbl">Marge</div><div class="val ${margin>=0?'profit':'loss'}">${margin!==null?(margin>=0?'+':'')+margin+'%':'--'}</div></div>
         </div>
@@ -980,7 +1001,7 @@ function renderCraft(){
 let ingCount=0;
 function openCraft(){
   document.getElementById('cr-name').value='';
-  document.getElementById('cr-sell').value='';
+  fillResSelect('cr-item');
   document.getElementById('cr-ingredients').innerHTML='';
   ingCount=0;
   addIngredient();addIngredient();
@@ -999,7 +1020,7 @@ function addIngredient(){
 }
 function submitCraft(){
   const name=document.getElementById('cr-name').value.trim();
-  const sell=I(document.getElementById('cr-sell').value);
+  const sell=null;// auto from prix du jour
   if(!name){T('Entre un nom !',1);return;}
   const ingredients=[];
   document.querySelectorAll('#cr-ingredients .fr').forEach(row=>{
