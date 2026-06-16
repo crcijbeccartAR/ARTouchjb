@@ -678,22 +678,17 @@ function renderPersoDetail(){
 }
 
 // ═══ MODAL ACTIONS ═══
-function delPrix(idx){
+function delPrix(idx,posFromEnd){
   if(!confirm('Supprimer ce prix ?'))return;
   if(!P[curRes])return;
-  var entry=P[curRes][idx];
-  var hasData=entry&&(entry.hdv1||entry.hdv10||entry.hdv100);
   P[curRes].splice(idx,1);
   sP();
-  if(hasData&&C.sheetWebhook){
-    var payload={type:'delete_one',resource:curRes,hdv1:Number(entry.hdv1)||0,hdv10:Number(entry.hdv10)||0,hdv100:Number(entry.hdv100)||0};
-    console.log('DELETE envoi:',JSON.stringify(payload));
+  if(C.sheetWebhook){
+    var payload={type:'delete_nth',resource:curRes,pos:posFromEnd};
+    console.log('DELETE:',curRes,'position',posFromEnd,'(0=plus recent)');
     fetch(C.sheetWebhook,{method:'POST',mode:'no-cors',body:JSON.stringify(payload)});
-    T('Supprime du site et du Sheet');
-  } else {
-    T('Supprime localement');
   }
-  renderMain();renderSB();
+  T('Supprime !');renderMain();renderSB();
 }
 function openPrix(){
   fillResSelect('px-res');
