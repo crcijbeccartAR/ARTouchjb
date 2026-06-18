@@ -187,6 +187,7 @@
   <div class="sidebar">
     <div class="search-box"><input type="text" id="search" placeholder="Rechercher..." oninput="renderSB()"></div>
     <button class="btn-add" onclick="openM('res-m')">+ Nouvelle ressource</button>
+    <button class="btn-add" onclick="openQuickEntry()" style="border-color:var(--gold-d);color:var(--gold)">⚡ Saisie rapide</button>
     <div id="res-list"></div>
   </div>
   <div class="main" id="main"><div class="empty"><p>Selectionne une ressource dans la liste de gauche pour voir son evolution de prix, ou ajoute-en une nouvelle.</p></div></div>
@@ -288,6 +289,17 @@
   <div id="cr-ingredients"></div>
   <button class="btn btn-outline btn-sm" style="width:100%;margin:8px 0" onclick="addIngredient()">+ Ajouter un ingredient</button>
   <div class="ma"><button class="btn btn-cancel" onclick="closeM('craft-m')">Annuler</button><button class="btn btn-gold" onclick="submitCraft()">Creer la recette</button></div>
+</div></div>
+
+<div class="overlay" id="quick-m"><div class="modal" style="width:700px;max-height:90vh;display:flex;flex-direction:column">
+  <h2>Saisie rapide des prix</h2>
+  <p style="font-size:.75rem;color:var(--dim);margin-bottom:12px">Remplis les prix qui ont change. Les champs vides sont ignores.</p>
+  <div style="display:flex;gap:8px;margin-bottom:12px">
+    <input type="text" id="qe-search" placeholder="Filtrer..." style="flex:1;background:var(--s2);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:6px;font-size:.82rem;outline:none" oninput="filterQuickEntry()">
+    <button class="btn btn-gold btn-sm" onclick="submitQuickEntry()">Enregistrer tout</button>
+  </div>
+  <div style="overflow-y:auto;flex:1" id="qe-list"></div>
+  <div class="ma" style="margin-top:12px"><button class="btn btn-cancel" onclick="closeM('quick-m')">Fermer</button><button class="btn btn-gold" onclick="submitQuickEntry()">Enregistrer tout</button></div>
 </div></div>
 
 <div class="overlay" id="sheets-m"><div class="modal" style="width:480px"><h2>Google Sheets</h2>
@@ -1086,6 +1098,75 @@ function renderTendances(){
   }
 
   d.innerHTML=html;
+}
+
+function openQuickEntry(){
+  renderQuickList('');
+  openM('quick-m');
+  document.getElementById('qe-search').value='';
+}
+function filterQuickEntry(){
+  renderQuickList(document.getElementById('qe-search').value);
+}
+function renderQuickList(filter){
+  var q=filter.toLowerCase();
+  var today=new Date().toISOString().split('T')[0];
+  var sorted=R.slice().sort(function(a,b){return a.name.localeCompare(b.name);});
+  var filtered=sorted.filter(function(r){
+    if(q&&r.name.toLowerCase().indexOf(q)===-1)return false;
+    if(!window._qeShowAll){
+      var pts=P[r.name]||[];
+      if(pts.length&&pts[pts.length-1].date===today)return false;
+    }
+    return true;
+  });
+  var totalToday=sorted.filter(function(r){var pts=P[r.name]||[];return pts.length&&pts[pts.length-1].date===today;}).length;
+  var html='<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><span style="font-size:.75rem;color:var(--dim)">'+totalToday+'/'+sorted.length+' deja a jour</span><span style="font-size:.75rem;color:var(--gold)">'+filtered.length+' a remplir</span><button onclick="window._qeShowAll=!window._qeShowAll;renderQuickList(document.getElementById(\'qe-search\').value)" style="margin-left:auto;background:var(--s2);border:1px solid var(--border);color:var(--dim);padding:4px 10px;border-radius:5px;font-size:.72rem;cursor:pointer">'+(window._qeShowAll?'Non actualisees':'Tout afficher')+'</button></div>';
+  var html2='<table style="width:100%"><thead><tr><th style="text-align:left;width:40%">Ressource</th><th>x1</th><th>x10</th><th>x100</th></tr></thead><tbody>';
+  html+=html2;
+  filtered.forEach(function(r){
+    var pts=P[r.name]||[];
+    var last=pts.length?pts[pts.length-1]:null;
+    var id=r.name.replace(/[^a-zA-Z0-9]/g,'_');
+    html+='<tr>';
+    html+='<td style="font-size:.82rem;font-weight:500">'+r.name+'<br><span style="font-size:.6rem;color:var(--dim2)">'+r.cat+(r.subcat?' > '+r.subcat:'')+'</span></td>';
+    html+='<td><input type="number" id="qe1_'+id+'" data-res="'+r.name+'" data-lot="1" placeholder="'+(last&&last.hdv1?last.hdv1:'-')+'" style="width:80px;background:var(--s2);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:5px;font-size:.8rem;outline:none;text-align:right"></td>';
+    html+='<td><input type="number" id="qe10_'+id+'" data-res="'+r.name+'" data-lot="10" placeholder="'+(last&&last.hdv10?last.hdv10:'-')+'" style="width:80px;background:var(--s2);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:5px;font-size:.8rem;outline:none;text-align:right"></td>';
+    html+='<td><input type="number" id="qe100_'+id+'" data-res="'+r.name+'" data-lot="100" placeholder="'+(last&&last.hdv100?last.hdv100:'-')+'" style="width:80px;background:var(--s2);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:5px;font-size:.8rem;outline:none;text-align:right"></td>';
+    html+='</tr>';
+  });
+  html+='</tbody></table>';
+  document.getElementById('qe-list').innerHTML=html;
+}
+function submitQuickEntry(){
+  var inputs=document.querySelectorAll('#qe-list input[type=number]');
+  var updates={};
+  inputs.forEach(function(inp){
+    var val=parseInt(inp.value);
+    if(!val)return;
+    var res=inp.getAttribute('data-res');
+    var lot=inp.getAttribute('data-lot');
+    if(!updates[res])updates[res]={};
+    if(lot==='1')updates[res].hdv1=val;
+    if(lot==='10')updates[res].hdv10=val;
+    if(lot==='100')updates[res].hdv100=val;
+  });
+  var count=0;
+  var now=new Date();
+  var dt=now.toISOString().split('T')[0];
+  var tm=now.toTimeString().slice(0,5);
+  Object.keys(updates).forEach(function(res){
+    var u=updates[res];
+    if(!P[res])P[res]=[];
+    P[res].push({date:dt,time:tm,hdv1:u.hdv1||null,hdv10:u.hdv10||null,hdv100:u.hdv100||null,author:C.pseudo||'',id:Date.now()+count});
+    P[res].sort(function(a,b){return(a.date+(a.time||'')).localeCompare(b.date+(b.time||''));});
+    wh({type:'price',date:dt,resource:res,hdv1:u.hdv1||'',hdv10:u.hdv10||'',hdv100:u.hdv100||'',author:C.pseudo||''});
+    count++;
+  });
+  sP();renderSB();
+  if(curRes)renderMain();
+  closeM('quick-m');
+  T(count+' ressource'+(count>1?'s':'')+' mise'+(count>1?'s':'')+' a jour !');
 }
 
 function exportCSV(){const rows=[['Date','Ressource','x1','x10','x100','Auteur']];Object.entries(P).forEach(([n,pts])=>pts.forEach(p=>rows.push([p.date,n,p.hdv1||'',p.hdv10||'',p.hdv100||'',p.author||''])));const b=new Blob([rows.map(r=>r.join(',')).join('\n')],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='artouchjb.csv';a.click();T('CSV !');}
