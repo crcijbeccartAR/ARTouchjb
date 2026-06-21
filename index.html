@@ -216,10 +216,11 @@
 <!-- MODALS -->
 <div class="overlay" id="prix-m"><div class="modal"><h2>Prix du jour</h2>
   <div class="field"><label>Ressource</label><select id="px-res"></select></div>
-  <div class="fr3">
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px">
     <div class="field"><label>x1</label><input type="number" id="px-1" min="0"></div>
     <div class="field"><label>x10</label><input type="number" id="px-10" min="0"></div>
     <div class="field"><label>x100</label><input type="number" id="px-100" min="0"></div>
+    <div class="field"><label>x1000</label><input type="number" id="px-1000" min="0"></div>
   </div>
   <div class="ma"><button class="btn btn-cancel" onclick="closeM('prix-m')">Annuler</button><button class="btn btn-gold" onclick="submitPrix()">Enregistrer</button></div>
 </div></div>
@@ -229,7 +230,7 @@
   <div class="field"><label>Ressource</label><select id="ac-res"></select></div>
   <div id="ac-preview" style="margin-bottom:12px"></div>
   <div class="fr3">
-    <div class="field"><label>Taille du lot</label><select id="ac-lot"><option value="1">x1</option><option value="10">x10</option><option value="100">x100</option></select></div>
+    <div class="field"><label>Taille du lot</label><select id="ac-lot"><option value="1">x1</option><option value="10">x10</option><option value="100">x100</option><option value="1000">x1000</option></select></div>
     <div class="field"><label>Nombre de lots</label><input type="number" id="ac-qty" min="1" placeholder="ex: 10"></div>
     <div class="field"><label>Prix par lot</label><input type="number" id="ac-price" min="0" placeholder="kamas"></div>
   </div>
@@ -242,7 +243,7 @@
   <div class="field"><label>Ressource</label><select id="ve-res"></select></div>
   <div id="ve-preview" style="margin-bottom:12px"></div>
   <div class="fr3">
-    <div class="field"><label>Taille du lot</label><select id="ve-lot"><option value="1">x1</option><option value="10">x10</option><option value="100">x100</option></select></div>
+    <div class="field"><label>Taille du lot</label><select id="ve-lot"><option value="1">x1</option><option value="10">x10</option><option value="100">x100</option><option value="1000">x1000</option></select></div>
     <div class="field"><label>Nombre de lots</label><input type="number" id="ve-qty" min="1" placeholder="ex: 100"></div>
     <div class="field"><label>Prix par lot</label><input type="number" id="ve-price" min="0" placeholder="kamas"></div>
   </div>
@@ -416,7 +417,7 @@ async function sync(){
     if(!rows.length){setOn(true);return;}
     const sp={};
     rows.forEach(r=>{const[dt,nm]=[r[0]||'',r[1]||''];if(!dt||!nm)return;if(!sp[nm])sp[nm]=[];
-      sp[nm].push({date:dt,hdv1:I(r[2]),hdv10:I(r[3]),hdv100:I(r[4]),achat:I(r[5]),vente1:I(r[6]),vente10:I(r[7]),vente100:I(r[8]),sold:r[9]||'non',author:r[10]||''});
+      sp[nm].push({date:dt,hdv1:I(r[2]),hdv10:I(r[3]),hdv100:I(r[4]),hdv1000:I(r[5]),achat:I(r[6]),vente1:I(r[7]),vente10:I(r[8]),vente100:I(r[9]),sold:r[10]||'non',author:r[11]||''});
     });
     Object.keys(sp).forEach(k=>{
       if(_deletedRes[k]&&(Date.now()-_deletedRes[k])<120000)return;
@@ -475,6 +476,7 @@ function getBestUnitPrice(resName){
   if(last.hdv1)options.push({lot:'x1',pu:last.hdv1});
   if(last.hdv10)options.push({lot:'x10',pu:Math.round(last.hdv10/10)});
   if(last.hdv100)options.push({lot:'x100',pu:Math.round(last.hdv100/100)});
+  if(last.hdv1000)options.push({lot:'x1000',pu:Math.round(last.hdv1000/1000)});
   if(!options.length)return null;
   options.sort(function(a,b){return a.pu-b.pu;});
   return options[0];
@@ -566,7 +568,7 @@ function trend(p){if(p.length<2)return null;const l=p[p.length-1].hdv1||0,v=p[p.
 function selRes(n){curRes=unesc(n);renderSB();renderMain();}
 function bl(p){const o=[];if(p.hdv1)o.push({l:'x1',u:p.hdv1});if(p.hdv10)o.push({l:'x10',u:Math.round(p.hdv10/10)});if(p.hdv100)o.push({l:'x100',u:Math.round(p.hdv100/100)});if(!o.length)return null;o.sort((a,b)=>a.u-b.u);return o[0].l;}
 function renderRent(p){
-  if(!p)return '';const o=[{l:'x1',t:p.hdv1,u:p.hdv1},{l:'x10',t:p.hdv10,u:p.hdv10?Math.round(p.hdv10/10):null},{l:'x100',t:p.hdv100,u:p.hdv100?Math.round(p.hdv100/100):null}].filter(x=>x.u);
+  if(!p)return '';const o=[{l:'x1',t:p.hdv1,u:p.hdv1},{l:'x10',t:p.hdv10,u:p.hdv10?Math.round(p.hdv10/10):null},{l:'x100',t:p.hdv100,u:p.hdv100?Math.round(p.hdv100/100):null},{l:'x1000',t:p.hdv1000,u:p.hdv1000?Math.round(p.hdv1000/1000):null}].filter(x=>x.u);
   if(o.length<2)return '';const mn=Math.min(...o.map(x=>x.u));
   return `<div class="rent-card"><div class="rent-title">Meilleur lot</div>${o.map(x=>`<div class="rl ${x.u===mn?'best':''}"><div class="rll">Lot ${x.l}</div><div class="rlp">${F(x.u)} /u</div><div class="rlt">Total: ${F(x.t)} kamas</div>${x.u===mn?'<div class="rlb">Meilleur</div>':`<div class="rlb bad">+${Math.round((x.u/mn-1)*100)}%</div>`}</div>`).join('')}</div>`;
 }
@@ -597,7 +599,7 @@ function renderMain(){
       <button class="${cRange===9999?'on':''}" onclick="cRange=9999;renderMain()">Tout</button>
     </div></div><div class="cw"><canvas id="cc"></canvas></div></div>
     <div class="card" style="padding:0;overflow:hidden"><div style="padding:12px;font-size:.65rem;color:var(--dim);text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border)">Historique</div>
-    <div style="overflow-x:auto"><table><thead><tr><th>Date</th><th>x1</th><th>x10</th><th>x100</th><th>Lot</th><th>Par</th><th></th></tr></thead>
+    <div style="overflow-x:auto"><table><thead><tr><th>Date</th><th>x1</th><th>x10</th><th>x100</th><th>x1000</th><th>Lot</th><th>Par</th><th></th></tr></thead>
     <tbody>${[...all].reverse().slice(0,30).map((p,i)=>`<tr><td>${D(p.date)}${p.time?' '+p.time:''}</td><td>${p.hdv1?F(p.hdv1):'--'}</td><td>${p.hdv10?F(p.hdv10):'--'}</td><td>${p.hdv100?F(p.hdv100):'--'}</td><td>${bl(p)?'<span class="badge best">'+bl(p)+'</span>':'--'}</td><td style="color:var(--dim)">${p.author||'--'}</td><td><button class="btn btn-danger btn-sm" style="padding:2px 6px;font-size:.6rem" onclick="delPrix(${all.length-1-i})">X</button></td></tr>`).join('')}</tbody></table></div></div>`;
   drawChart(pts);
 }
@@ -812,16 +814,17 @@ function openPrix(){
   fillResSelect('px-res');
   if(curRes)document.getElementById('px-res').value=curRes;
   openM('prix-m');
+  setTimeout(function(){makeSearchable('px-res');if(curRes){var w=document.getElementById('px-res').parentNode.querySelector('input');if(w)w.value=curRes;}},50);
 }
 function submitPrix(){
   const name=document.getElementById('px-res').value;
-  const h1=I(document.getElementById('px-1').value),h10=I(document.getElementById('px-10').value),h100=I(document.getElementById('px-100').value);
-  if(!h1&&!h10&&!h100){T('Entre un prix !',1);return;}
+  const h1=I(document.getElementById('px-1').value),h10=I(document.getElementById('px-10').value),h100=I(document.getElementById('px-100').value),h1000=I(document.getElementById('px-1000').value);
+  if(!h1&&!h10&&!h100&&!h1000){T('Entre un prix !',1);return;}
   const now=new Date();
   const dt=now.toISOString().split('T')[0];
   const tm=now.toTimeString().slice(0,5);
   if(!P[name])P[name]=[];
-  P[name].push({date:dt,time:tm,hdv1:h1||null,hdv10:h10||null,hdv100:h100||null,author:C.pseudo||'',id:Date.now()});
+  P[name].push({date:dt,time:tm,hdv1:h1||null,hdv10:h10||null,hdv100:h100||null,hdv1000:h1000||null,author:C.pseudo||'',id:Date.now()});
   P[name].sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));sP();
   wh({type:'price',date:dt,resource:name,hdv1:h1,hdv10:h10,hdv100:h100,author:C.pseudo||''});
   closeM('prix-m');['px-1','px-10','px-100'].forEach(x=>document.getElementById(x).value='');
@@ -835,6 +838,7 @@ function getLastPrice(resName, lotSize) {
   if (lotSize === 1) return last.hdv1 || null;
   if (lotSize === 10) return last.hdv10 || null;
   if (lotSize === 100) return last.hdv100 || null;
+  if (lotSize === 1000) return last.hdv1000 || null;
   return null;
 }
 function autoFillPrice(resId, lotId, priceId) {
@@ -854,7 +858,8 @@ function renderPricePreview(resName, targetId, mode) {
   const opts = [
     { l: 'x1', total: last.hdv1, pu: last.hdv1 },
     { l: 'x10', total: last.hdv10, pu: last.hdv10 ? Math.round(last.hdv10 / 10) : null },
-    { l: 'x100', total: last.hdv100, pu: last.hdv100 ? Math.round(last.hdv100 / 100) : null }
+    { l: 'x100', total: last.hdv100, pu: last.hdv100 ? Math.round(last.hdv100 / 100) : null },
+    { l: 'x1000', total: last.hdv1000, pu: last.hdv1000 ? Math.round(last.hdv1000 / 1000) : null }
   ].filter(o => o.pu);
   if (!opts.length) { el.innerHTML = ''; return; }
   const mn = mode === 'vente' ? Math.max(...opts.map(o => o.pu)) : Math.min(...opts.map(o => o.pu));
@@ -867,11 +872,48 @@ function renderPricePreview(resName, targetId, mode) {
     '</div>').join('') + '</div>';
 }
 function fillPersoSelect(id){document.getElementById(id).innerHTML=persos.map(p=>`<option>${p.name}</option>`).join('');}
+function makeSearchable(selectId){
+  var sel=document.getElementById(selectId);
+  if(!sel||sel.dataset.searchable)return;
+  sel.dataset.searchable='1';
+  sel.style.display='none';
+  var wrap=document.createElement('div');
+  wrap.style.cssText='position:relative';
+  sel.parentNode.insertBefore(wrap,sel);
+  wrap.appendChild(sel);
+  var inp=document.createElement('input');
+  inp.type='text';inp.placeholder='Rechercher...';inp.autocomplete='off';
+  inp.style.cssText='width:100%;background:var(--s2);border:1px solid var(--border);color:var(--text);padding:8px 11px;border-radius:6px;font-size:.85rem;outline:none;font-family:Inter,sans-serif';
+  wrap.insertBefore(inp,sel);
+  var list=document.createElement('div');
+  list.style.cssText='position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border-l);border-radius:0 0 8px 8px;max-height:180px;overflow-y:auto;z-index:50;display:none';
+  wrap.appendChild(list);
+  function show(){
+    var q=inp.value.toLowerCase();
+    var opts=Array.from(sel.options);
+    var html='';
+    opts.forEach(function(o){
+      if(q&&o.text.toLowerCase().indexOf(q)===-1)return;
+      html+='<div style="padding:7px 12px;font-size:.82rem;cursor:pointer;transition:background .1s" onmouseover="this.style.background=\'var(--s2)\'" onmouseout="this.style.background=\'none\'" data-v="'+o.value+'">'+o.text+'</div>';
+    });
+    list.innerHTML=html||'<div style="padding:7px 12px;font-size:.78rem;color:var(--dim)">Aucun resultat</div>';
+    list.style.display='block';
+  }
+  inp.addEventListener('focus',show);
+  inp.addEventListener('input',show);
+  list.addEventListener('click',function(ev){
+    var d=ev.target.closest('[data-v]');
+    if(d){sel.value=d.getAttribute('data-v');inp.value=d.textContent;list.style.display='none';sel.dispatchEvent(new Event('change'));}
+  });
+  document.addEventListener('click',function(ev){if(!wrap.contains(ev.target))list.style.display='none';});
+  if(sel.value){var so=sel.options[sel.selectedIndex];if(so)inp.value=so.text;}
+}
+
 function fillResSelect(id){document.getElementById(id).innerHTML=R.map(r=>`<option>${r.name}</option>`).join('');}
 
 function openAchat(){
   if(!persos.length){T('Cree un perso d\'abord !',1);go('stats');return;}
-  fillPersoSelect('ac-perso');fillResSelect('ac-res');
+  fillPersoSelect('ac-perso');fillResSelect('ac-res');setTimeout(function(){makeSearchable('ac-res');},50);
   document.getElementById('ac-res').onchange=()=>{autoFillPrice('ac-res','ac-lot','ac-price');renderPricePreview(document.getElementById('ac-res').value,'ac-preview','achat');};
   document.getElementById('ac-lot').onchange=()=>autoFillPrice('ac-res','ac-lot','ac-price');
   const updateTotal=()=>{const q=I(document.getElementById('ac-qty').value)||0,p=I(document.getElementById('ac-price').value)||0;document.getElementById('ac-total').value=F(q*p)+' kamas';};
@@ -896,7 +938,7 @@ function submitAchat(){
 
 function openVente(){
   if(!persos.length){T('Cree un perso d\'abord !',1);go('stats');return;}
-  fillPersoSelect('ve-perso');fillResSelect('ve-res');
+  fillPersoSelect('ve-perso');fillResSelect('ve-res');setTimeout(function(){makeSearchable('ve-res');},50);
   document.getElementById('ve-res').onchange=()=>{autoFillPrice('ve-res','ve-lot','ve-price');renderPricePreview(document.getElementById('ve-res').value,'ve-preview','vente');};
   document.getElementById('ve-lot').onchange=()=>autoFillPrice('ve-res','ve-lot','ve-price');
   autoFillPrice('ve-res','ve-lot','ve-price');
@@ -1082,6 +1124,7 @@ function openCraft(){
   document.getElementById('cr-name').value='';
   fillResSelect('cr-item');
   document.getElementById('cr-item').value='';
+  setTimeout(function(){makeSearchable('cr-item');},50);
   document.getElementById('cr-ingredients').innerHTML='';
   ingCount=0;
   addIngredient();addIngredient();
@@ -1190,7 +1233,7 @@ function renderQuickList(filter){
   });
   var totalToday=sorted.filter(function(r){var pts=P[r.name]||[];return pts.length&&pts[pts.length-1].date===today;}).length;
   var html='<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><span style="font-size:.75rem;color:var(--dim)">'+totalToday+'/'+sorted.length+' deja a jour</span><span style="font-size:.75rem;color:var(--gold)">'+filtered.length+' a remplir</span><button onclick="window._qeShowAll=!window._qeShowAll;renderQuickList(document.getElementById(\'qe-search\').value)" style="margin-left:auto;background:var(--s2);border:1px solid var(--border);color:var(--dim);padding:4px 10px;border-radius:5px;font-size:.72rem;cursor:pointer">'+(window._qeShowAll?'Non actualisees':'Tout afficher')+'</button></div>';
-  var html2='<table style="width:100%"><thead><tr><th style="text-align:left;width:40%">Ressource</th><th>x1</th><th>x10</th><th>x100</th></tr></thead><tbody>';
+  var html2='<table style="width:100%"><thead><tr><th style="text-align:left;width:40%">Ressource</th><th>x1</th><th>x10</th><th>x100</th><th>x1000</th></tr></thead><tbody>';
   html+=html2;
   filtered.forEach(function(r){
     var pts=P[r.name]||[];
@@ -1202,6 +1245,7 @@ function renderQuickList(filter){
     html+='<td><input type="number" data-res="'+enc+'" data-lot="1" placeholder="'+(last&&last.hdv1?last.hdv1:'-')+'" style="width:80px;background:var(--s2);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:5px;font-size:.8rem;outline:none;text-align:right"></td>';
     html+='<td><input type="number" data-res="'+enc+'" data-lot="10" placeholder="'+(last&&last.hdv10?last.hdv10:'-')+'" style="width:80px;background:var(--s2);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:5px;font-size:.8rem;outline:none;text-align:right"></td>';
     html+='<td><input type="number" data-res="'+enc+'" data-lot="100" placeholder="'+(last&&last.hdv100?last.hdv100:'-')+'" style="width:80px;background:var(--s2);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:5px;font-size:.8rem;outline:none;text-align:right"></td>';
+    html+='<td><input type="number" data-res="'+enc+'" data-lot="1000" placeholder="'+(last&&last.hdv1000?last.hdv1000:'-')+'" style="width:80px;background:var(--s2);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:5px;font-size:.8rem;outline:none;text-align:right"></td>';
     html+='</tr>';
   });
   html+='</tbody></table>';
@@ -1219,6 +1263,7 @@ function submitQuickEntry(){
     if(lot==='1')updates[res].hdv1=val;
     if(lot==='10')updates[res].hdv10=val;
     if(lot==='100')updates[res].hdv100=val;
+    if(lot==='1000')updates[res].hdv1000=val;
   });
   var count=0;
   var now=new Date();
@@ -1227,10 +1272,10 @@ function submitQuickEntry(){
   Object.keys(updates).forEach(function(res){
     var u=updates[res];
     if(!P[res])P[res]=[];
-    P[res].push({date:dt,time:tm,hdv1:u.hdv1||null,hdv10:u.hdv10||null,hdv100:u.hdv100||null,author:C.pseudo||'',id:Date.now()+count});
+    P[res].push({date:dt,time:tm,hdv1:u.hdv1||null,hdv10:u.hdv10||null,hdv100:u.hdv100||null,hdv1000:u.hdv1000||null,author:C.pseudo||'',id:Date.now()+count});
     P[res].sort(function(a,b){return(a.date+(a.time||'')).localeCompare(b.date+(b.time||''));});
     if(C.sheetWebhook){
-      fetch(C.sheetWebhook,{method:'POST',mode:'no-cors',body:JSON.stringify({type:'price',date:dt,resource:res,hdv1:u.hdv1||'',hdv10:u.hdv10||'',hdv100:u.hdv100||'',author:C.pseudo||''})});
+      fetch(C.sheetWebhook,{method:'POST',mode:'no-cors',body:JSON.stringify({type:'price',date:dt,resource:res,hdv1:u.hdv1||'',hdv10:u.hdv10||'',hdv100:u.hdv100||'',hdv1000:u.hdv1000||'',author:C.pseudo||''})});
     }
     count++;
   });
@@ -1300,7 +1345,7 @@ function renderStock(){
   d.innerHTML=html;
 }
 function openStock(){
-  fillResSelect('st-res');
+  fillResSelect('st-res');setTimeout(function(){makeSearchable('st-res');},50);
   document.getElementById('st-qty').value='';
   document.getElementById('st-price').value='';
   document.getElementById('st-target').value='';
