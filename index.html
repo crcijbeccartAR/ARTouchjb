@@ -180,12 +180,14 @@
   <button onclick="go('stats')">Statistiques</button>
   <button onclick="go('craft')">Craft</button>
   <button onclick="go('tendances')">Tendances</button>
+  <button onclick="go('stock')">Stock</button>
 </div>
 
 <!-- PRIX -->
 <div class="wrap grid" id="v-prix">
   <div class="sidebar">
     <div class="search-box"><input type="text" id="search" placeholder="Rechercher..." oninput="renderSB()"></div>
+    <select id="region-filter" onchange="renderSB()" style="width:100%;background:var(--s2);border:1px solid var(--border);color:var(--dim);padding:6px 8px;border-radius:6px;font-size:.75rem;outline:none;margin-bottom:6px"><option value="">Toutes les regions</option><option>Amakna</option><option>Astrub</option><option>Frigost</option><option>Incarnam</option><option>Otomai</option><option>Pandala</option><option>Sufokia</option></select>
     <button class="btn-add" onclick="openM('res-m')">+ Nouvelle ressource</button>
     <button class="btn-add" onclick="openQuickEntry()" style="border-color:var(--gold-d);color:var(--gold)">⚡ Saisie rapide</button>
     <div id="res-list"></div>
@@ -207,6 +209,9 @@
 
 <!-- TENDANCES -->
 <div class="wrap" id="v-tendances" style="display:none"></div>
+
+<!-- STOCK -->
+<div class="wrap" id="v-stock" style="display:none"></div>
 
 <!-- MODALS -->
 <div class="overlay" id="prix-m"><div class="modal"><h2>Prix du jour</h2>
@@ -264,8 +269,9 @@
 
 <div class="overlay" id="res-m"><div class="modal"><h2>Nouvelle ressource</h2>
   <div class="field"><label>Nom</label><input type="text" id="rm-name" placeholder="ex: Patte d'Arakne"></div>
-  <div class="field"><label>Categorie</label><select id="rm-cat" onchange="document.getElementById('rm-subcat-wrap').style.display=(SUBCATS_MAP[this.value]&&SUBCATS_MAP[this.value].length)?'':'none'"><option>Alchimistes</option><option>Animaux</option><option>Bijoutiers</option><option>Bouchers & chasseurs</option><option>Boulangers</option><option>Bricoleurs</option><option>Bucherons</option><option>Cordonniers</option><option>Documents</option><option>Dofus & Trophees</option><option>Fee d'artifice</option><option>Figurines</option><option>Forgerons</option><option>Milice</option><option>Mineurs</option><option>Objets d'Apparats</option><option>Paysans</option><option>Pierres d'ames</option><option>Poissonniers & pecheurs</option><option selected>Ressources</option><option>Runes</option><option>Sculpteurs</option><option>Tailleurs</option></select></div>
+  <div class="field"><label>Categorie</label><select id="rm-cat" onchange="updateSubcatDropdown()"></select></div>
   <div class="field" id="rm-subcat-wrap"><label>Sous-categorie</label><select id="rm-subcat"></select></div>
+  <div class="field"><label>Region</label><select id="rm-region"><option value="">-- Aucune --</option><option>Amakna</option><option>Astrub</option><option>Frigost</option><option>Incarnam</option><option>Otomai</option><option>Pandala</option><option>Sufokia</option></select></div>
   <div class="ma"><button class="btn btn-cancel" onclick="closeM('res-m')">Annuler</button><button class="btn btn-gold" onclick="submitRes()">Ajouter</button></div>
 </div></div>
 
@@ -273,6 +279,7 @@
   <div class="field"><label>Nom</label><input type="text" id="em-name" disabled style="opacity:.6"></div>
   <div class="field"><label>Categorie</label><select id="em-cat" onchange="updateEditSubcat()"></select></div>
   <div class="field" id="em-subcat-wrap"><label>Sous-categorie</label><select id="em-subcat"></select></div>
+  <div class="field"><label>Region</label><select id="em-region"><option value="">-- Aucune --</option><option>Amakna</option><option>Astrub</option><option>Frigost</option><option>Incarnam</option><option>Otomai</option><option>Pandala</option><option>Sufokia</option></select></div>
   <div class="ma"><button class="btn btn-cancel" onclick="closeM('edit-m')">Annuler</button><button class="btn btn-gold" onclick="saveEditRes()">Enregistrer</button></div>
 </div></div>
 
@@ -291,11 +298,22 @@
   <div class="ma"><button class="btn btn-cancel" onclick="closeM('craft-m')">Annuler</button><button class="btn btn-gold" onclick="submitCraft()">Creer la recette</button></div>
 </div></div>
 
+<div class="overlay" id="stock-m"><div class="modal"><h2>Ajouter au stock</h2>
+  <div class="field"><label>Ressource</label><select id="st-res"></select></div>
+  <div class="fr3">
+    <div class="field"><label>Quantite</label><input type="number" id="st-qty" min="1" placeholder="ex: 200"></div>
+    <div class="field"><label>Prix d'achat /u</label><input type="number" id="st-price" min="0" placeholder="kamas"></div>
+    <div class="field"><label>Objectif de vente /u</label><input type="number" id="st-target" min="0" placeholder="optionnel"></div>
+  </div>
+  <div class="ma"><button class="btn btn-cancel" onclick="closeM('stock-m')">Annuler</button><button class="btn btn-gold" onclick="submitStock()">Ajouter</button></div>
+</div></div>
+
 <div class="overlay" id="quick-m"><div class="modal" style="width:700px;max-height:90vh;display:flex;flex-direction:column">
   <h2>Saisie rapide des prix</h2>
   <p style="font-size:.75rem;color:var(--dim);margin-bottom:12px">Remplis les prix qui ont change. Les champs vides sont ignores.</p>
   <div style="display:flex;gap:8px;margin-bottom:12px">
     <input type="text" id="qe-search" placeholder="Filtrer..." style="flex:1;background:var(--s2);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:6px;font-size:.82rem;outline:none" oninput="filterQuickEntry()">
+    <button id="qe-fav-btn" onclick="window._qeFavOnly=!window._qeFavOnly;filterQuickEntry();document.getElementById('qe-fav-btn').style.color=window._qeFavOnly?'var(--gold)':'var(--dim)'" style="background:var(--s2);border:1px solid var(--border);color:var(--dim);padding:6px 12px;border-radius:6px;font-size:.9rem;cursor:pointer">★</button>
     <button class="btn btn-gold btn-sm" onclick="submitQuickEntry()">Enregistrer tout</button>
   </div>
   <div style="overflow-y:auto;flex:1" id="qe-list"></div>
@@ -330,10 +348,16 @@ let persos=JSON.parse(localStorage.getItem('artouchjb-persos')||'[]');
 let achats=JSON.parse(localStorage.getItem('artouchjb-achats')||'[]');
 let ventes=JSON.parse(localStorage.getItem('artouchjb-ventes')||'[]');
 let curRes=null,chart=null,cRange=30;
+var favs=JSON.parse(localStorage.getItem('artouchjb-favs')||'[]');
+function sFav(){localStorage.setItem('artouchjb-favs',JSON.stringify(favs));}
+function toggleFav(name){name=decodeURIComponent(name);var i=favs.indexOf(name);if(i>=0)favs.splice(i,1);else favs.push(name);sFav();renderSB();if(curRes)renderMain();}
 let _deletedRes=JSON.parse(localStorage.getItem('artouchjb-deleted')||'{}');
 let crafts=JSON.parse(localStorage.getItem('artouchjb-crafts')||'[]');
+var stocks=JSON.parse(localStorage.getItem('artouchjb-stocks')||'[]');
+function sSt(){localStorage.setItem('artouchjb-stocks',JSON.stringify(stocks));}
 function sC(){localStorage.setItem('artouchjb-crafts',JSON.stringify(crafts));}
 const CATS=['Alchimistes','Animaux','Bijoutiers','Bouchers & chasseurs','Boulangers','Bricoleurs','Bucherons','Cordonniers','Documents','Dofus & Trophees','Fee d\'artifice','Figurines','Forgerons','Milice','Mineurs','Objets d\'Apparats','Paysans','Pierres d\'ames','Poissonniers & pecheurs','Ressources','Runes','Sculpteurs','Tailleurs'];
+const REGIONS=['','Amakna','Astrub','Frigost','Incarnam','Otomai','Pandala','Sufokia'];
 const SUBCATS_MAP={
 'Alchimistes':['Materiel d\'alchimie','Metaria','Objet de dons','Potion','Potion d\'oubli de maitrise','Potion d\'oubli de metier','Potion d\'oubli de sort','Potion d\'oubli Percepteur','Potion de conquete','Potion de forgemagie','Potion de teleportation','Teinture'],
 'Animaux':['Certificat de familier','Certificat de montilier','Certificat de monture','Familier','Fantome de Familier','Fantome de Montilier','Montilier','Objet vivant','Oeuf de familier','Potion de familier','Potion de montilier'],
@@ -371,14 +395,15 @@ function sV(){localStorage.setItem('artouchjb-ventes',JSON.stringify(ventes))}
 let view='prix';
 function go(v){
   view=v;
-  document.querySelectorAll('.nav button').forEach((b,i)=>b.className=['prix','achats','ventes','stats','craft','tendances'][i]===v?'on':'');
-  ['prix','achats','ventes','stats','craft','tendances'].forEach(x=>{const el=document.getElementById('v-'+x);if(el)el.style.display=x===v?'':'none';});
+  document.querySelectorAll('.nav button').forEach((b,i)=>b.className=['prix','achats','ventes','stats','craft','tendances','stock'][i]===v?'on':'');
+  ['prix','achats','ventes','stats','craft','tendances','stock'].forEach(x=>{const el=document.getElementById('v-'+x);if(el)el.style.display=x===v?'':'none';});
   if(v==='prix'){document.getElementById('v-prix').style.display='grid';}
   if(v==='achats')renderAchats();
   if(v==='ventes')renderVentes();
   if(v==='stats')renderStats();
   if(v==='craft')renderCraft();
   if(v==='tendances')renderTendances();
+  if(v==='stock')renderStock();
 }
 
 // ═══ SHEETS ═══
@@ -406,6 +431,10 @@ async function sync(){
       }
     });
     sR();sP();setOn(true);function updateSubcatDropdown(){
+  var catSel=document.getElementById('rm-cat');
+  if(!catSel.options.length){
+    catSel.innerHTML=CATS.filter(function(c){return c!=='--- Regions ---';}).map(function(c){return '<option'+(c==='Ressources'?' selected':'')+'>'+c+'</option>';}).join('');
+  }
   const cat=document.getElementById('rm-cat').value;
   const subs=SUBCATS_MAP[cat]||[];
   document.getElementById('rm-subcat').innerHTML=subs.map(s=>'<option>'+s+'</option>').join('')+'<option>Autre</option>';
@@ -462,41 +491,75 @@ function getInventoryValue(persoName){
 
 // ═══ SIDEBAR ═══
 function renderSB(){
-  const q=(document.getElementById('search')?.value||'').toLowerCase();
-  const filtered=R.filter(r=>r.name.toLowerCase().includes(q));
-  let html='';
-  CATS.forEach(c=>{
-    const items=filtered.filter(r=>r.cat===c);
-    if(!items.length)return;
-    const hasSubs=SUBCATS_MAP[c]&&SUBCATS_MAP[c].length>0;
-    if(hasSubs){
-      html+=`<div class="cat-label">${c}</div>`;
-      const subs={};
-      items.forEach(r=>{const sc=r.subcat||'Autre';if(!subs[sc])subs[sc]=[];subs[sc].push(r);});
-      const subKeys=Object.keys(subs).sort();
-      subKeys.forEach(sc=>{
-        const key=c+'_'+sc;
-        const isOpen=window._openSubs&&window._openSubs[key];
-        html+=`<div class="subcat-toggle" onclick="toggleSub('${esc(key)}')"><span class="arrow ${isOpen?'open':''}">&#9654;</span>${sc} (${subs[sc].length})</div>`;
-        html+=`<div class="subcat-items ${isOpen?'open':''}">${subs[sc].map(r=>{
-          const t=trend(P[r.name]||[]);
-          var ld=(P[r.name]&&P[r.name].length)?P[r.name][P[r.name].length-1].date:'';
-      return `<div class="ri ${curRes===r.name?'on':''}" onclick="selRes('${esc(r.name)}')"><span class="rn">${r.name}</span><span style="font-size:.58rem;color:var(--dim2);margin-left:4px">${ld?D(ld):''}</span>${t!==null?`<span class="tr ${t>=10?'up':t<=-5?'down':'flat'}" style="margin-left:4px">${t>0?'+':''}${t}%</span>`:''}</div>`;
-        }).join('')}</div>`;
-      });
-    } else {
-      html+=`<div class="cat-label">${c}</div>`;
-      html+=items.map(r=>{
-        const t=trend(P[r.name]||[]);
-        var ld=(P[r.name]&&P[r.name].length)?P[r.name][P[r.name].length-1].date:'';
-      return `<div class="ri ${curRes===r.name?'on':''}" onclick="selRes('${esc(r.name)}')"><span class="rn">${r.name}</span><span style="font-size:.58rem;color:var(--dim2);margin-left:4px">${ld?D(ld):''}</span>${t!==null?`<span class="tr ${t>=10?'up':t<=-5?'down':'flat'}" style="margin-left:4px">${t>0?'+':''}${t}%</span>`:''}</div>`;
-      }).join('');
+  var q=(document.getElementById('search')?document.getElementById('search').value:'').toLowerCase();
+  var regFilter=document.getElementById('region-filter')?document.getElementById('region-filter').value:'';
+  var all=R.filter(function(r){
+    if(q&&r.name.toLowerCase().indexOf(q)===-1)return false;
+    if(regFilter&&(r.region||'')!==regFilter)return false;
+    return true;
+  });
+  var html='';
+  var regions=[];var byRegion={};
+  all.forEach(function(r){
+    var reg=r.region||'Sans region';
+    if(!byRegion[reg]){byRegion[reg]=[];regions.push(reg);}
+    byRegion[reg].push(r);
+  });
+  regions.sort(function(a,b){if(a==='Sans region')return 1;if(b==='Sans region')return -1;return a.localeCompare(b);});
+  regions.forEach(function(reg){
+    var regItems=byRegion[reg];
+    var regKey='reg_'+reg;
+    var regOpen=window._openSubs&&window._openSubs[regKey];
+    if(regions.length>1||reg!=='Sans region'){
+      html+='<div class="cat-label" style="cursor:pointer;display:flex;align-items:center;gap:6px;color:var(--gold-d)" data-toggle="'+encodeURIComponent(regKey)+'"><span class="arrow '+(regOpen?'open':'')+'" style="font-size:.5rem">&#9654;</span>'+reg+' ('+regItems.length+')</div>';
+      if(!regOpen)return;
     }
+    var cats={};CATS.forEach(function(c){cats[c]=[];});
+    regItems.forEach(function(r){if(!cats[r.cat])cats[r.cat]=[];cats[r.cat].push(r);});
+    CATS.forEach(function(c){
+      var items=cats[c]||[];if(!items.length)return;
+      var hasSubs=SUBCATS_MAP[c]&&SUBCATS_MAP[c].length>0;
+      if(hasSubs){
+        html+='<div class="cat-label" style="padding-left:12px">'+c+'</div>';
+        var subs={};items.forEach(function(r){var sc=r.subcat||'Autre';if(!subs[sc])subs[sc]=[];subs[sc].push(r);});
+        Object.keys(subs).sort().forEach(function(sc){
+          var key=reg+'_'+c+'_'+sc;
+          var isOpen=window._openSubs&&window._openSubs[key];
+          html+='<div class="subcat-toggle" style="padding-left:16px" data-toggle="'+encodeURIComponent(key)+'"><span class="arrow '+(isOpen?'open':'')+'" style="font-size:.5rem">&#9654;</span>'+sc+' ('+subs[sc].length+')</div>';
+          if(isOpen){html+='<div style="padding-left:12px">';subs[sc].forEach(function(r){html+=renderResItem(r);});html+='</div>';}
+        });
+      } else {
+        html+='<div class="cat-label" style="padding-left:12px">'+c+'</div>';
+        items.forEach(function(r){html+=renderResItem(r);});
+      }
+    });
   });
   document.getElementById('res-list').innerHTML=html;
+  document.querySelectorAll('[data-toggle]').forEach(function(el){
+    el.onclick=function(){var k=decodeURIComponent(el.getAttribute('data-toggle'));window._openSubs[k]=!window._openSubs[k];renderSB();};
+  });
+}
+function renderResItem(r){
+  var t=trend(P[r.name]||[]);
+  var isFav=favs.indexOf(r.name)>=0;
+  var ld=(P[r.name]&&P[r.name].length)?P[r.name][P[r.name].length-1].date:'';
+  var h='<div class="ri '+(curRes===r.name?'on':'')+'" data-res="'+esc(r.name)+'" style="padding-left:20px">';
+  h+='<span class="fav-star" data-fav="'+esc(r.name)+'" style="cursor:pointer;font-size:.7rem;margin-right:4px;color:'+(isFav?'var(--gold)':'var(--dim2)')+'">'+(isFav?'\u2605':'\u2606')+'</span>';
+  h+='<span class="rn">'+r.name+'</span>';
+  h+='<span style="font-size:.58rem;color:var(--dim2);margin-left:4px">'+(ld?D(ld):'')+'</span>';
+  if(t!==null)h+='<span class="tr '+(t>=10?'up':t<=-5?'down':'flat')+'" style="margin-left:4px">'+(t>0?'+':'')+t+'%</span>';
+  h+='</div>';
+  return h;
 }
 if(!window._openSubs)window._openSubs={};
-function toggleSub(sc){sc=unesc(sc);window._openSubs[sc]=!window._openSubs[sc];renderSB();}
+document.getElementById('res-list').addEventListener('click',function(ev){
+  var star=ev.target.closest('.fav-star');
+  if(star){ev.stopPropagation();toggleFav(star.getAttribute('data-fav'));return;}
+  var ri=ev.target.closest('.ri[data-res]');
+  if(ri){selRes(ri.getAttribute('data-res'));}
+});
+
+
 function trend(p){if(p.length<2)return null;const l=p[p.length-1].hdv1||0,v=p[p.length-2].hdv1||0;return v?Math.round(((l-v)/v)*100):null;}
 
 // ═══ PRIX VIEW ═══
@@ -516,6 +579,7 @@ function renderMain(){
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
       <div><h2 style="font-family:Cinzel,serif;font-size:1.1rem;color:var(--al)">${r.name}</h2><p style="font-size:.72rem;color:var(--dim)">${r.cat}${r.subcat?' > '+r.subcat:''} - ${all.length} releves de prix</p></div>
       <div style="margin-left:auto;display:flex;gap:8px">
+        <button class="btn btn-outline btn-sm" onclick="toggleFav('${esc(r.name)}')">\${favs.indexOf(r.name)>=0?'★ Favori':'☆ Ajouter aux favoris'}</button>
         <button class="btn btn-outline btn-sm" onclick="openEditRes()">Modifier</button>
         <button class="btn btn-danger btn-sm" onclick="delRes()">Supprimer</button>
         <button class="btn btn-gold" onclick="openPrix()">+ Prix du jour</button>
@@ -906,8 +970,9 @@ function delVente(i){if(!confirm('Supprimer cette vente ?'))return;ventes.splice
 function submitRes(){
   const name=document.getElementById('rm-name').value.trim(),cat=document.getElementById('rm-cat').value;
   const subcat=(SUBCATS_MAP[cat]&&SUBCATS_MAP[cat].length)?document.getElementById('rm-subcat').value:'';
+  const region=document.getElementById('rm-region').value||'';
   if(!name){T('Nom !',1);return;}if(R.find(r=>r.name===name)){T('Existe !',1);return;}
-  R.push({name,cat,subcat:subcat||''});sR();
+  R.push({name,cat,subcat:subcat||'',region:region});sR();
   const today=new Date().toISOString().split('T')[0];
   if(!P[name])P[name]=[];
   P[name].push({date:today,time:new Date().toTimeString().slice(0,5),hdv1:null,hdv10:null,hdv100:null,author:C.pseudo||'',id:Date.now()});
@@ -930,6 +995,7 @@ function openEditRes(){
   const catSel=document.getElementById('em-cat');
   catSel.innerHTML=CATS.map(c=>'<option'+(c===r.cat?' selected':'')+'>'+c+'</option>').join('');
   updateEditSubcat(r.subcat);
+  document.getElementById('em-region').value=r.region||'';
   openM('edit-m');
 }
 function updateEditSubcat(current){
@@ -950,6 +1016,7 @@ function saveEditRes(){
   r.cat=document.getElementById('em-cat').value;
   const subs=SUBCATS_MAP[r.cat]||[];
   r.subcat=subs.length?document.getElementById('em-subcat').value:'';
+  r.region=document.getElementById('em-region').value||'';
   sR();closeM('edit-m');renderSB();renderMain();T('Ressource modifiee !');
 }
 function delRes(){if(!curRes||!confirm('Supprimer ?'))return;
@@ -1114,6 +1181,7 @@ function renderQuickList(filter){
   var sorted=R.slice().sort(function(a,b){return a.name.localeCompare(b.name);});
   var filtered=sorted.filter(function(r){
     if(q&&r.name.toLowerCase().indexOf(q)===-1)return false;
+    if(window._qeFavOnly&&favs.indexOf(r.name)<0)return false;
     if(!window._qeShowAll){
       var pts=P[r.name]||[];
       if(pts.length&&pts[pts.length-1].date===today)return false;
@@ -1130,9 +1198,10 @@ function renderQuickList(filter){
     var id=r.name.replace(/[^a-zA-Z0-9]/g,'_');
     html+='<tr>';
     html+='<td style="font-size:.82rem;font-weight:500">'+r.name+'<br><span style="font-size:.6rem;color:var(--dim2)">'+r.cat+(r.subcat?' > '+r.subcat:'')+'</span></td>';
-    html+='<td><input type="number" id="qe1_'+id+'" data-res="'+r.name+'" data-lot="1" placeholder="'+(last&&last.hdv1?last.hdv1:'-')+'" style="width:80px;background:var(--s2);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:5px;font-size:.8rem;outline:none;text-align:right"></td>';
-    html+='<td><input type="number" id="qe10_'+id+'" data-res="'+r.name+'" data-lot="10" placeholder="'+(last&&last.hdv10?last.hdv10:'-')+'" style="width:80px;background:var(--s2);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:5px;font-size:.8rem;outline:none;text-align:right"></td>';
-    html+='<td><input type="number" id="qe100_'+id+'" data-res="'+r.name+'" data-lot="100" placeholder="'+(last&&last.hdv100?last.hdv100:'-')+'" style="width:80px;background:var(--s2);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:5px;font-size:.8rem;outline:none;text-align:right"></td>';
+    var enc=encodeURIComponent(r.name);
+    html+='<td><input type="number" data-res="'+enc+'" data-lot="1" placeholder="'+(last&&last.hdv1?last.hdv1:'-')+'" style="width:80px;background:var(--s2);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:5px;font-size:.8rem;outline:none;text-align:right"></td>';
+    html+='<td><input type="number" data-res="'+enc+'" data-lot="10" placeholder="'+(last&&last.hdv10?last.hdv10:'-')+'" style="width:80px;background:var(--s2);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:5px;font-size:.8rem;outline:none;text-align:right"></td>';
+    html+='<td><input type="number" data-res="'+enc+'" data-lot="100" placeholder="'+(last&&last.hdv100?last.hdv100:'-')+'" style="width:80px;background:var(--s2);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:5px;font-size:.8rem;outline:none;text-align:right"></td>';
     html+='</tr>';
   });
   html+='</tbody></table>';
@@ -1144,7 +1213,7 @@ function submitQuickEntry(){
   inputs.forEach(function(inp){
     var val=parseInt(inp.value);
     if(!val)return;
-    var res=inp.getAttribute('data-res');
+    var res=decodeURIComponent(inp.getAttribute('data-res'));
     var lot=inp.getAttribute('data-lot');
     if(!updates[res])updates[res]={};
     if(lot==='1')updates[res].hdv1=val;
@@ -1160,7 +1229,9 @@ function submitQuickEntry(){
     if(!P[res])P[res]=[];
     P[res].push({date:dt,time:tm,hdv1:u.hdv1||null,hdv10:u.hdv10||null,hdv100:u.hdv100||null,author:C.pseudo||'',id:Date.now()+count});
     P[res].sort(function(a,b){return(a.date+(a.time||'')).localeCompare(b.date+(b.time||''));});
-    wh({type:'price',date:dt,resource:res,hdv1:u.hdv1||'',hdv10:u.hdv10||'',hdv100:u.hdv100||'',author:C.pseudo||''});
+    if(C.sheetWebhook){
+      fetch(C.sheetWebhook,{method:'POST',mode:'no-cors',body:JSON.stringify({type:'price',date:dt,resource:res,hdv1:u.hdv1||'',hdv10:u.hdv10||'',hdv100:u.hdv100||'',author:C.pseudo||''})});
+    }
     count++;
   });
   sP();renderSB();
@@ -1168,6 +1239,83 @@ function submitQuickEntry(){
   closeM('quick-m');
   T(count+' ressource'+(count>1?'s':'')+' mise'+(count>1?'s':'')+' a jour !');
 }
+
+function renderStock(){
+  var d=document.getElementById('v-stock');
+  var html='<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;flex-wrap:wrap">';
+  html+='<div><h2 style="font-family:Cinzel,serif;font-size:1.1rem;color:var(--gold-l)">Stock</h2>';
+  html+='<p style="font-size:.75rem;color:var(--dim);margin-top:2px">Achete bas, attends que le prix monte, vends haut.</p></div>';
+  html+='<button class="btn btn-gold" style="margin-left:auto" onclick="openStock()">+ Ajouter au stock</button></div>';
+
+  if(stocks.length){
+    var totalInvested=stocks.reduce(function(s,st){return s+st.qty*st.buyPrice;},0);
+    var totalCurrentVal=0;
+    stocks.forEach(function(st){
+      var best=getBestSellPrice(st.resource);
+      if(best)totalCurrentVal+=st.qty*best.pu;
+    });
+    var totalProfit=totalCurrentVal-totalInvested;
+
+    html+='<div class="stats" style="margin-bottom:16px">';
+    html+='<div class="stat"><div class="lbl">Articles en stock</div><div class="val">'+stocks.length+'</div></div>';
+    html+='<div class="stat"><div class="lbl">Investi</div><div class="val">'+F(totalInvested)+'</div></div>';
+    html+='<div class="stat"><div class="lbl">Valeur actuelle</div><div class="val" style="color:var(--gold)">'+F(totalCurrentVal)+'</div></div>';
+    html+='<div class="stat"><div class="lbl">Plus-value</div><div class="val '+(totalProfit>=0?'profit':'loss')+'">'+(totalProfit>=0?'+':'')+F(totalProfit)+'</div></div>';
+    html+='</div>';
+
+    stocks.forEach(function(st,i){
+      var best=getBestSellPrice(st.resource);
+      var curPrice=best?best.pu:null;
+      var curLot=best?best.lot:'';
+      var diff=curPrice?curPrice-st.buyPrice:null;
+      var pct=curPrice?Math.round(((curPrice-st.buyPrice)/st.buyPrice)*100):null;
+      var shouldSell=false;
+      if(st.target&&curPrice>=st.target)shouldSell=true;
+      else if(!st.target&&diff>0)shouldSell=true;
+      var totalBuy=st.qty*st.buyPrice;
+      var totalNow=curPrice?st.qty*curPrice:0;
+      var profit=totalNow-totalBuy;
+
+      html+='<div class="card" style="border-left:3px solid '+(shouldSell?'var(--green)':'var(--gold-d)')+'">';
+      html+='<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap">';
+      html+='<div style="flex:1"><span style="font-weight:600;font-size:.95rem">'+st.resource+'</span>';
+      html+='<span style="font-size:.72rem;color:var(--dim);margin-left:8px">'+st.qty+' unites - achete le '+D(st.date)+'</span></div>';
+      html+='<span style="font-size:.85rem;font-weight:700;padding:4px 12px;border-radius:6px;'+(shouldSell?'background:rgba(90,184,106,.12);color:var(--green)':'background:rgba(212,168,83,.1);color:var(--gold)')+'">'+(shouldSell?'VENDS':'ATTENDS')+'</span>';
+      html+='<button class="btn btn-danger btn-sm" onclick="delStock('+i+')">X</button>';
+      html+='</div>';
+
+      html+='<div class="stats" style="grid-template-columns:repeat(auto-fill,minmax(120px,1fr));margin-bottom:0">';
+      html+='<div class="stat"><div class="lbl">Achete a</div><div class="val">'+F(st.buyPrice)+'<span> /u</span></div></div>';
+      html+='<div class="stat"><div class="lbl">Prix actuel '+curLot+'</div><div class="val '+(diff>0?'profit':diff<0?'loss':'')+'">'+(curPrice?F(curPrice):'?')+'<span> /u</span></div></div>';
+      if(st.target)html+='<div class="stat"><div class="lbl">Objectif</div><div class="val">'+F(st.target)+'<span> /u</span></div></div>';
+      html+='<div class="stat"><div class="lbl">Variation</div><div class="val '+(pct>=0?'profit':'loss')+'">'+(pct!==null?(pct>=0?'+':'')+pct+'%':'?')+'</div></div>';
+      html+='<div class="stat"><div class="lbl">Investi</div><div class="val">'+F(totalBuy)+'</div></div>';
+      html+='<div class="stat"><div class="lbl">Valeur actuelle</div><div class="val" style="color:var(--gold)">'+F(totalNow)+'</div></div>';
+      html+='<div class="stat"><div class="lbl">Plus-value</div><div class="val '+(profit>=0?'profit':'loss')+'">'+(profit>=0?'+':'')+F(profit)+'</div></div>';
+      html+='</div></div>';
+    });
+  } else {
+    html+='<div class="empty"><p>Aucun stock.<br>Ajoute des ressources que tu gardes en attendant que le prix monte.</p></div>';
+  }
+  d.innerHTML=html;
+}
+function openStock(){
+  fillResSelect('st-res');
+  document.getElementById('st-qty').value='';
+  document.getElementById('st-price').value='';
+  document.getElementById('st-target').value='';
+  openM('stock-m');
+}
+function submitStock(){
+  var res=document.getElementById('st-res').value;
+  var qty=I(document.getElementById('st-qty').value);
+  var price=I(document.getElementById('st-price').value);
+  var target=I(document.getElementById('st-target').value);
+  if(!res||!qty||!price){T('Remplis ressource, quantite et prix !',1);return;}
+  stocks.push({resource:res,qty:qty,buyPrice:price,target:target||null,date:new Date().toISOString().split('T')[0]});
+  sSt();closeM('stock-m');T(res+' ajoute au stock !');renderStock();
+}
+function delStock(i){if(!confirm('Retirer du stock ?'))return;stocks.splice(i,1);sSt();T('Retire du stock');renderStock();}
 
 function exportCSV(){const rows=[['Date','Ressource','x1','x10','x100','Auteur']];Object.entries(P).forEach(([n,pts])=>pts.forEach(p=>rows.push([p.date,n,p.hdv1||'',p.hdv10||'',p.hdv100||'',p.author||''])));const b=new Blob([rows.map(r=>r.join(',')).join('\n')],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='artouchjb.csv';a.click();T('CSV !');}
 
