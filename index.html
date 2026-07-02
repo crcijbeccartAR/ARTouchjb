@@ -159,6 +159,17 @@
   #toast.show{opacity:1;transform:translateY(0)}#toast.err{border-left-color:var(--red)}
 
   ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}::-webkit-scrollbar-thumb:hover{background:var(--border-l)}
+  @media(max-width:768px){
+    .wrap.grid{grid-template-columns:1fr !important;grid-template-rows:auto 1fr}
+    .wrap.grid>.sidebar{max-height:250px;border-right:none;border-bottom:1px solid var(--border)}
+    .stats{grid-template-columns:repeat(2,1fr) !important}
+    .nav{gap:0}.nav button{padding:10px 12px;font-size:.75rem}
+    header{padding:10px 16px}.logo{font-size:1rem}
+    .modal{padding:18px;width:95vw !important}
+    .rent-card{gap:8px}.rl{min-width:70px;padding:8px}
+    .pg{grid-template-columns:1fr !important}
+    .inv-item{flex-direction:column;align-items:stretch}
+  }
 </style>
 </head>
 <body>
@@ -174,7 +185,8 @@
 <div id="cb">Non connecte. <a href="#" onclick="openM('sheets-m');return false">Configurer</a></div>
 
 <div class="nav" id="nav">
-  <button class="on" onclick="go('prix')">Prix du jour</button>
+  <button class="on" onclick="go('dashboard')">Accueil</button>
+  <button onclick="go('prix')">Prix</button>
   <button onclick="go('achats')">Achats</button>
   <button onclick="go('ventes')">Ventes</button>
   <button onclick="go('stats')">Statistiques</button>
@@ -183,8 +195,11 @@
   <button onclick="go('stock')">Stock</button>
 </div>
 
+<!-- DASHBOARD -->
+<div class="wrap" id="v-dashboard"></div>
+
 <!-- PRIX -->
-<div class="wrap grid" id="v-prix">
+<div class="wrap grid" id="v-prix" style="display:none">
   <div class="sidebar">
     <div class="search-box"><input type="text" id="search" placeholder="Rechercher..." oninput="renderSB()"></div>
     <select id="region-filter" onchange="renderSB()" style="width:100%;background:var(--s2);border:1px solid var(--border);color:var(--dim);padding:6px 8px;border-radius:6px;font-size:.75rem;outline:none;margin-bottom:6px"><option value="">Toutes les regions</option><option>Amakna</option><option>Astrub</option><option>Frigost</option><option>Incarnam</option><option>Otomai</option><option>Pandala</option><option>Sufokia</option></select>
@@ -299,6 +314,18 @@
   <div class="ma"><button class="btn btn-cancel" onclick="closeM('craft-m')">Annuler</button><button class="btn btn-gold" onclick="submitCraft()">Creer la recette</button></div>
 </div></div>
 
+<div class="overlay" id="alert-m"><div class="modal"><h2>Alerte de prix</h2>
+  <div class="field"><label>Ressource</label><select id="al-res"></select></div>
+  <div class="field"><label>Condition</label><select id="al-type"><option value="below">Passe en dessous de</option><option value="above">Passe au dessus de</option></select></div>
+  <div class="field"><label>Prix seuil</label><input type="number" id="al-price" min="0" placeholder="ex: 5000"></div>
+  <div class="ma"><button class="btn btn-cancel" onclick="closeM('alert-m')">Annuler</button><button class="btn btn-gold" onclick="addAlert()">Ajouter</button></div>
+</div></div>
+
+<div class="overlay" id="shop-m"><div class="modal" style="width:500px"><h2>Liste de courses</h2>
+  <div id="shop-content"></div>
+  <div class="ma"><button class="btn btn-cancel" onclick="closeM('shop-m')">Fermer</button></div>
+</div></div>
+
 <div class="overlay" id="stock-m"><div class="modal"><h2>Ajouter au stock</h2>
   <div class="field"><label>Ressource</label><select id="st-res"></select></div>
   <div class="fr3">
@@ -335,7 +362,13 @@
 <div class="overlay" id="cfg-m"><div class="modal"><h2>Parametres</h2>
   <div class="field"><label>Pseudo</label><input type="text" id="cfg-pseudo"></div>
     <div class="field"><label>Taxe HDV en % (defaut: 2)</label><input type="number" id="cfg-tax" placeholder="2" min="0" max="20" step="0.1"></div>
-  <div class="ma"><button class="btn btn-cancel" onclick="closeM('cfg-m')">Annuler</button><button class="btn btn-gold" onclick="saveCfg()">OK</button></div>
+  <div class="divider"></div>
+    <div class="sl">Sauvegarde complete</div>
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      <button class="btn btn-outline" style="flex:1;justify-content:center" onclick="exportAll()">Exporter tout</button>
+      <label class="btn btn-outline" style="flex:1;justify-content:center;cursor:pointer">Importer<input type="file" id="import-file" accept=".json" style="display:none" onchange="importAll(this)"></label>
+    </div>
+    <div class="ma"><button class="btn btn-cancel" onclick="closeM('cfg-m')">Annuler</button><button class="btn btn-gold" onclick="saveCfg()">OK</button></div>
 </div></div>
 
 <div id="toast"></div>
@@ -350,6 +383,8 @@ let achats=JSON.parse(localStorage.getItem('artouchjb-achats')||'[]');
 let ventes=JSON.parse(localStorage.getItem('artouchjb-ventes')||'[]');
 let curRes=null,chart=null,cRange=30;
 var favs=JSON.parse(localStorage.getItem('artouchjb-favs')||'[]');
+var alerts=JSON.parse(localStorage.getItem('artouchjb-alerts')||'[]');
+function sAl(){localStorage.setItem('artouchjb-alerts',JSON.stringify(alerts));}
 function sFav(){localStorage.setItem('artouchjb-favs',JSON.stringify(favs));}
 function toggleFav(name){name=decodeURIComponent(name);var i=favs.indexOf(name);if(i>=0)favs.splice(i,1);else favs.push(name);sFav();renderSB();if(curRes)renderMain();}
 let _deletedRes=JSON.parse(localStorage.getItem('artouchjb-deleted')||'{}');
@@ -396,8 +431,9 @@ function sV(){localStorage.setItem('artouchjb-ventes',JSON.stringify(ventes))}
 let view='prix';
 function go(v){
   view=v;
-  document.querySelectorAll('.nav button').forEach((b,i)=>b.className=['prix','achats','ventes','stats','craft','tendances','stock'][i]===v?'on':'');
-  ['prix','achats','ventes','stats','craft','tendances','stock'].forEach(x=>{const el=document.getElementById('v-'+x);if(el)el.style.display=x===v?'':'none';});
+  document.querySelectorAll('.nav button').forEach((b,i)=>b.className=['dashboard','prix','achats','ventes','stats','craft','tendances','stock'][i]===v?'on':'');
+  ['dashboard','prix','achats','ventes','stats','craft','tendances','stock'].forEach(x=>{const el=document.getElementById('v-'+x);if(el)el.style.display=x===v?'':'none';});
+  if(v==='dashboard')renderDashboard();
   if(v==='prix'){document.getElementById('v-prix').style.display='grid';}
   if(v==='achats')renderAchats();
   if(v==='ventes')renderVentes();
@@ -443,7 +479,8 @@ async function sync(){
 }
 document.getElementById('rm-cat').addEventListener('change',updateSubcatDropdown);
 updateSubcatDropdown();
-renderSB();if(curRes)renderMain();
+renderSB();
+renderDashboard();if(curRes)renderMain();
     document.getElementById('sl').textContent='Sync '+new Date().toLocaleTimeString('fr',{hour:'2-digit',minute:'2-digit'});
   }catch(e){setOn(false);}
 }
@@ -576,6 +613,10 @@ function renderMain(){
   const r=R.find(x=>x.name===curRes);if(!r)return;
   const all=P[r.name]||[],pts=all.slice(-cRange),last=pts[pts.length-1]||null,prev=pts[pts.length-2]||null;
   const t=(last?.hdv1&&prev?.hdv1)?Math.round(((last.hdv1-prev.hdv1)/prev.hdv1)*100):null;
+  const vals7=all.slice(-7).filter(p=>p.hdv1).map(p=>p.hdv1);
+  const avg7=vals7.length?Math.round(vals7.reduce((a,b)=>a+b,0)/vals7.length):null;
+  const vals30=all.slice(-30).filter(p=>p.hdv1).map(p=>p.hdv1);
+  const avg30=vals30.length?Math.round(vals30.reduce((a,b)=>a+b,0)/vals30.length):null;
   let al='';if(t!==null){if(t>=10)al=`<div class="alert warn">+${t}% — vendre</div>`;else if(t<=-10)al=`<div class="alert good">${t}% — attends</div>`;else al=`<div class="alert info">Stable (${t>0?'+':''}${t}%)</div>`;}
   document.getElementById('main').innerHTML=`
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
@@ -1361,6 +1402,151 @@ function submitStock(){
   sSt();closeM('stock-m');T(res+' ajoute au stock !');renderStock();
 }
 function delStock(i){if(!confirm('Retirer du stock ?'))return;stocks.splice(i,1);sSt();T('Retire du stock');renderStock();}
+
+function renderDashboard(){
+  var d=document.getElementById('v-dashboard');
+  var perso=persos.length?persos[0]:null;
+  var today=new Date().toISOString().split('T')[0];
+  var toUpdate=R.filter(function(r){var pts=P[r.name]||[];return !pts.length||pts[pts.length-1].date!==today;}).length;
+  var ventesEnCours=ventes.filter(function(v){return v.soldQty<v.qty;});
+  var firedAlerts=[];
+  alerts.forEach(function(a){
+    var best=getBestSellPrice(a.resource);
+    if(!best)return;
+    if(a.type==='below'&&best.pu<=a.price)firedAlerts.push({name:a.resource,msg:'est passe sous '+F(a.price)+' (actuel: '+F(best.pu)+')',type:'buy'});
+    if(a.type==='above'&&best.pu>=a.price)firedAlerts.push({name:a.resource,msg:'est passe au dessus de '+F(a.price)+' (actuel: '+F(best.pu)+')',type:'sell'});
+  });
+  var topCrafts=crafts.map(function(c){
+    var cost=0;var ok=true;
+    c.ingredients.forEach(function(ig){var b=getBestUnitPrice(ig.resource);if(b)cost+=b.pu*ig.qty;else ok=false;});
+    var sell=getBestSellPrice(c.itemRes||c.name);
+    var sp=sell?sell.pu:null;
+    var profit=sp&&ok?sp-cost:null;
+    var margin=profit&&cost?Math.round((profit/cost)*100):null;
+    return{name:c.name,cost:cost,sell:sp,profit:profit,margin:margin};
+  }).filter(function(c){return c.profit!==null;}).sort(function(a,b){return b.margin-a.margin;});
+
+  var html='<div style="margin-bottom:16px"><h2 style="font-family:Cinzel,serif;font-size:1.2rem;color:var(--gold-l)">Tableau de bord</h2>';
+  html+='<p style="font-size:.78rem;color:var(--dim);margin-top:4px">Resume de ton activite trading.</p></div>';
+
+  if(firedAlerts.length){
+    html+='<div class="card" style="border-left:3px solid var(--red)">';
+    html+='<div class="card-title" style="color:var(--red)">Alertes de prix</div>';
+    firedAlerts.forEach(function(a){
+      html+='<div style="padding:6px 0;border-bottom:1px solid var(--border)"><strong>'+a.name+'</strong> '+a.msg+'</div>';
+    });
+    html+='</div>';
+  }
+
+  html+='<div class="stats">';
+  if(perso){
+    var pa=achats.filter(function(a){return a.perso===perso.name;});
+    var pv=ventes.filter(function(v){return v.perso===perso.name;});
+    var spent=pa.reduce(function(s,a){return s+a.total;},0);
+    var earned=pv.reduce(function(s,v){return s+getEarned(v);},0);
+    var bal=perso.startKamas-spent+Math.round(earned*(1-getTax()));
+    html+='<div class="stat"><div class="lbl">Solde '+perso.name+'</div><div class="val" style="color:var(--gold-l)">'+F(bal)+'</div></div>';
+  }
+  html+='<div class="stat"><div class="lbl">Ventes en cours</div><div class="val" style="color:var(--gold)">'+ventesEnCours.length+'</div></div>';
+  html+='<div class="stat"><div class="lbl">A actualiser</div><div class="val '+(toUpdate>0?'loss':'profit')+'">'+toUpdate+'/'+R.length+'</div></div>';
+  html+='<div class="stat"><div class="lbl">Stock</div><div class="val">'+stocks.length+'</div></div>';
+  html+='</div>';
+
+  if(topCrafts.length){
+    html+='<div class="card"><div class="card-title">Top crafts rentables</div>';
+    topCrafts.slice(0,5).forEach(function(c,i){
+      html+='<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">';
+      html+='<span style="font-size:.75rem;color:var(--dim);width:20px">#'+(i+1)+'</span>';
+      html+='<span style="flex:1;font-weight:500">'+c.name+'</span>';
+      html+='<span style="font-size:.78rem;color:var(--dim)">Cout: '+F(c.cost)+'</span>';
+      html+='<span class="'+(c.profit>=0?'profit':'loss')+'" style="font-weight:600">'+(c.profit>=0?'+':'')+F(c.profit)+'</span>';
+      html+='<span class="badge '+(c.margin>=0?'best':'buy')+'">'+c.margin+'%</span>';
+      html+='</div>';
+    });
+    html+='</div>';
+  }
+
+  if(ventesEnCours.length){
+    html+='<div class="card"><div class="card-title">Ventes en cours</div>';
+    ventesEnCours.slice(0,8).forEach(function(v){
+      var pct=Math.round((v.soldQty/v.qty)*100);
+      html+='<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)">';
+      html+='<span style="flex:1;font-weight:500;font-size:.85rem">'+v.resource+'</span>';
+      html+='<span style="font-size:.72rem;color:var(--dim)">'+v.soldQty+'/'+v.qty+'</span>';
+      html+='<div style="width:60px"><div class="inv-bar-bg"><div class="inv-bar" style="width:'+pct+'%"></div></div></div>';
+      html+='</div>';
+    });
+    html+='</div>';
+  }
+
+  var stocksToSell=stocks.filter(function(st){var b=getBestSellPrice(st.resource);return b&&(st.target?b.pu>=st.target:b.pu>st.buyPrice);});
+  if(stocksToSell.length){
+    html+='<div class="card" style="border-left:3px solid var(--green)"><div class="card-title" style="color:var(--green)">Stocks a vendre maintenant</div>';
+    stocksToSell.forEach(function(st){
+      var b=getBestSellPrice(st.resource);
+      html+='<div style="padding:6px 0;border-bottom:1px solid var(--border)"><strong>'+st.resource+'</strong> — achete a '+F(st.buyPrice)+'/u, actuel: <span class="profit">'+F(b.pu)+'/u</span></div>';
+    });
+    html+='</div>';
+  }
+
+  html+='<div style="margin-top:16px"><button class="btn btn-gold" onclick="openAlertModal()">+ Ajouter une alerte de prix</button></div>';
+  d.innerHTML=html;
+}
+
+function openAlertModal(){fillResSelect('al-res');openM('alert-m');setTimeout(function(){makeSearchable('al-res');},50);}
+function addAlert(){
+  var res=document.getElementById('al-res').value;
+  var type=document.getElementById('al-type').value;
+  var price=I(document.getElementById('al-price').value);
+  if(!res||!price){T('Remplis tout !',1);return;}
+  alerts.push({resource:res,type:type,price:price});
+  sAl();closeM('alert-m');T('Alerte ajoutee !');
+  if(view==='dashboard')renderDashboard();
+}
+
+function craftShoppingList(idx){
+  var c=crafts[idx];if(!c)return;
+  var html='<h3 style="color:var(--gold-l);margin-bottom:12px">Liste de courses : '+c.name+'</h3>';
+  var total=0;
+  c.ingredients.forEach(function(ig){
+    var best=getBestUnitPrice(ig.resource);
+    var pu=best?best.pu:0;var lot=best?best.lot:'?';
+    var cost=pu*ig.qty;total+=cost;
+    html+='<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">';
+    html+='<span style="flex:1;font-weight:500">'+ig.resource+'</span>';
+    html+='<span style="font-size:.78rem;color:var(--dim)">x'+ig.qty+'</span>';
+    html+='<span class="badge best">Acheter en '+lot+'</span>';
+    html+='<span style="font-weight:600">'+F(cost)+'</span>';
+    html+='</div>';
+  });
+  html+='<div style="display:flex;justify-content:space-between;padding:10px 0;font-weight:700;font-size:1rem;border-top:2px solid var(--border);margin-top:8px"><span>Total</span><span>'+F(total)+'</span></div>';
+  document.getElementById('shop-content').innerHTML=html;
+  openM('shop-m');
+}
+
+function exportAll(){
+  var data={R:R,P:P,persos:persos,achats:achats,ventes:ventes,stocks:stocks,crafts:crafts,favs:favs,alerts:alerts,cfg:C};
+  var blob=new Blob([JSON.stringify(data)],{type:'application/json'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='artouchjb-backup-'+new Date().toISOString().split('T')[0]+'.json';a.click();
+  T('Sauvegarde exportee !');
+}
+function importAll(input){
+  var file=input.files[0];if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(ev){
+    try{
+      var data=JSON.parse(ev.target.result);
+      if(data.R)R=data.R;if(data.P)P=data.P;if(data.persos)persos=data.persos;
+      if(data.achats)achats=data.achats;if(data.ventes)ventes=data.ventes;
+      if(data.stocks)stocks=data.stocks;if(data.crafts)crafts=data.crafts;
+      if(data.favs)favs=data.favs;if(data.alerts)alerts=data.alerts;
+      sR();sP();sPe();sA();sV();sSt();sC();sFav();sAl();
+      T('Donnees importees !');renderSB();
+      if(view==='dashboard')renderDashboard();
+    }catch(e){T('Fichier invalide',1);}
+  };
+  reader.readAsText(file);
+}
 
 function exportCSV(){const rows=[['Date','Ressource','x1','x10','x100','Auteur']];Object.entries(P).forEach(([n,pts])=>pts.forEach(p=>rows.push([p.date,n,p.hdv1||'',p.hdv10||'',p.hdv100||'',p.author||''])));const b=new Blob([rows.map(r=>r.join(',')).join('\n')],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='artouchjb.csv';a.click();T('CSV !');}
 
